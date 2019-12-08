@@ -1,0 +1,13 @@
+{
+  "name": "secure-es-revolution",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sandbox.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npx -p typescript tsc -w",
+    "serve": "npx serve"
+  },
+  "author": "",
+  "license": "ISC"
+}

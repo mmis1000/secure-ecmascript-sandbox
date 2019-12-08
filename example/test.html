@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <script src="../lib/sandbox.js"></script>
+    <script>
+        const createRoot = window.sesInit()
+        const server = createRoot(window)
+
+        let iframe = document.createElement('iframe')
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
+        iframe.style.display = 'none';
+
+        document.body.append(iframe)
+
+        const realm = iframe.contentWindow.eval(`
+            window.document.title = 'test'
+            window.sesInit = ${window.sesInit.toString()}
+            const createRoot = window.sesInit()
+            const server = createRoot(window)
+            server
+        `)
+
+        delete iframe.contentWindow.top
+        delete iframe.contentWindow.opener
+        delete iframe.contentWindow.parent
+
+        // iframe.parentNode.removeChild(iframe)
+        iframe = null
+
+        const remote = server.create(realm)
+
+        console.log(remote.document.title)
+    </script>
+</body>
+</html>
