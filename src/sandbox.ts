@@ -1,4 +1,4 @@
-import { Command, ValueWrapper, ResponseFailed, World, Token } from './interface'
+import { ValueWrapper, ResponseFailed, World, Token } from './interface'
 
 declare global {
     var sesInit: () => any
@@ -31,7 +31,13 @@ window.sesInit = () => {
         set: Reflect.set,
         getOwnPropertyDescriptor: Reflect.getOwnPropertyDescriptor,
         apply: Reflect.apply,
-        getPrototypeOf: Reflect.getPrototypeOf
+        getPrototypeOf: Reflect.getPrototypeOf,
+        defineProperty: Reflect.defineProperty,
+        setPrototypeOf: Reflect.setPrototypeOf,
+        isExtensible: Reflect.isExtensible,
+        preventExtensions: Reflect.preventExtensions,
+        has: Reflect.has,
+        deleteProperty: Reflect.deleteProperty
     }
     const FCreateEmpty = Object.create.bind(Object, null)
     const FSetPrototypeOf = Object.setPrototypeOf
@@ -210,7 +216,26 @@ window.sesInit = () => {
                     )
 
                     if (res.success) {
-                        return { ...unwrap(res.value), configurable: true }
+                        var unwrapped = unwrap(res.value)
+                        if (!unwrapped.configurable) {
+                            // TODO: is doing this really safe?
+                            // browser don't like you to fake configurable
+                            FReflect.defineProperty(fakeTarget, key, unwrapped)
+                        }
+                        return unwrapped
+                    } else {
+                        throw unwrap(res.value)
+                    }
+                },
+                defineProperty (target, key, attributes) {
+                    var res = anotherWorld.trap_defineProperty(
+                        wrapper,
+                        dropPrototypeRecursive(toWrapper(key, currentWorld)),
+                        dropPrototypeRecursive(toWrapper(attributes, currentWorld))
+                    )
+
+                    if (res.success) {
+                        return unwrap(res.value)
                     } else {
                         throw unwrap(res.value)
                     }
@@ -255,6 +280,65 @@ window.sesInit = () => {
                 getPrototypeOf(target) {
                     var res = anotherWorld.trap_getPrototypeOf(
                         wrapper
+                    )
+
+                    if (res.success) {
+                        return unwrap(res.value)
+                    } else {
+                        throw unwrap(res.value)
+                    }
+                },
+                setPrototypeOf (target, prototype) {
+                    var res = anotherWorld.trap_setPrototypeOf(
+                        wrapper,
+                        dropPrototypeRecursive(toWrapper(prototype, currentWorld))
+                    )
+
+                    if (res.success) {
+                        return unwrap(res.value)
+                    } else {
+                        throw unwrap(res.value)
+                    }
+                },
+                isExtensible (target) {
+                    var res = anotherWorld.trap_isExtensible(
+                        wrapper
+                    )
+
+                    if (res.success) {
+                        return unwrap(res.value)
+                    } else {
+                        throw unwrap(res.value)
+                    }
+                },
+                preventExtensions (target) {
+                    var res = anotherWorld.trap_preventExtensions(
+                        wrapper
+                    )
+
+                    if (res.success) {
+                        return unwrap(res.value)
+                    } else {
+                        throw unwrap(res.value)
+                    }
+                },
+
+                has (target, key) {
+                    var res = anotherWorld.trap_has(
+                        wrapper,
+                        dropPrototypeRecursive(toWrapper(key, currentWorld))
+                    )
+
+                    if (res.success) {
+                        return unwrap(res.value)
+                    } else {
+                        throw unwrap(res.value)
+                    }
+                },
+                deleteProperty (target, key) {
+                    var res = anotherWorld.trap_deleteProperty(
+                        wrapper,
+                        dropPrototypeRecursive(toWrapper(key, currentWorld))
                     )
 
                     if (res.success) {
@@ -484,6 +568,101 @@ window.sesInit = () => {
                         return {
                             success: true,
                             value: toWrapper(FReflect.getPrototypeOf(target), currentWorld)
+                        }
+                    }))
+                } catch (err) {
+                    return badPayload
+                }
+            },
+
+            trap_defineProperty(targetW: ValueWrapper, keyW: ValueWrapper, attributesW: ValueWrapper) {
+                try {
+                    const target = unwrap(targetW)
+                    const key = unwrap(keyW)
+                    const attributes = unwrap(attributesW)
+
+                    return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
+                        return {
+                            success: true,
+                            value: toWrapper(FReflect.defineProperty(target, key, attributes), currentWorld)
+                        }
+                    }))
+                } catch (err) {
+                    return badPayload
+                }
+            },
+
+            trap_setPrototypeOf (targetW, prototypeW) {
+                try {
+                    const target = unwrap(targetW)
+                    const prototype = unwrap(prototypeW)
+
+                    return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
+                        return {
+                            success: true,
+                            value: toWrapper(FReflect.setPrototypeOf(target, prototype), currentWorld)
+                        }
+                    }))
+                } catch (err) {
+                    return badPayload
+                }
+            },
+
+            trap_isExtensible (targetW) {
+                try {
+                    const target = unwrap(targetW)
+
+                    return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
+                        return {
+                            success: true,
+                            value: toWrapper(FReflect.isExtensible(target), currentWorld)
+                        }
+                    }))
+                } catch (err) {
+                    return badPayload
+                }
+            },
+
+            trap_preventExtensions (targetW) {
+                try {
+                    const target = unwrap(targetW)
+
+                    return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
+                        return {
+                            success: true,
+                            value: toWrapper(FReflect.preventExtensions(target), currentWorld)
+                        }
+                    }))
+                } catch (err) {
+                    return badPayload
+                }
+            },
+
+            trap_has (targetW, keyW) {
+                try {
+                    const target = unwrap(targetW)
+                    const key = unwrap(keyW)
+
+                    return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
+                        return {
+                            success: true,
+                            value: toWrapper(FReflect.has(target, key), currentWorld)
+                        }
+                    }))
+                } catch (err) {
+                    return badPayload
+                }
+            },
+
+            trap_deleteProperty (targetW, keyW) {
+                try {
+                    const target = unwrap(targetW)
+                    const key = unwrap(keyW)
+
+                    return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
+                        return {
+                            success: true,
+                            value: toWrapper(FReflect.deleteProperty(target, key), currentWorld)
                         }
                     }))
                 } catch (err) {
