@@ -68,8 +68,8 @@
                 el2.textContent = 123
                 mainDoc.body.appendChild(el2)
                 mainDoc.body.appendChild(new Test)
-                // console.log(el2 instanceof Test)
-                // console.log(new Test)
+                
+                console.log(String(main))
                 debugger
             } catch (err) {
                 debugger
@@ -77,6 +77,12 @@
             }
             debugger
         `)
+
+        console.log(Object.keys(remote))
+
+        console.log(remote.Array.isArray(new remote.Array()))
+        console.log(Array.isArray(new remote.Array()))
+        console.log(remote.Array.isArray(new Array()))
     </script>
 </body>
 </html>
