@@ -142,24 +142,21 @@ window.sesInit = () => {
             }
 
             // to fake
+            const type: string | null = FReflect.get(token, 'type')
+            const world: World = FReflect.get(token, 'owner')
 
-            return runSafe(() => {
-                const type: string | null = FReflect.get(token, 'type')
-                const world: World = FReflect.get(token, 'owner')
+            if (world === currentWorld) {
+                throw new Error('Unexpected owner of current world')
+            }
 
-                if (world === currentWorld) {
-                    throw new Error('Unexpected owner of current world')
-                }
-
-                switch (type) {
-                    case 'function':
-                        return toProxy(token, 'function')
-                    case 'object':
-                        return toProxy(token, 'object')
-                    default:
-                        throw new Error('bad type')
-                }
-            })
+            switch (type) {
+                case 'function':
+                    return toProxy(token, 'function')
+                case 'object':
+                    return toProxy(token, 'object')
+                default:
+                    throw new Error('bad type')
+            }
         }
 
         function toProxy (token: Token, type: 'function' | 'object'): any {
@@ -325,32 +322,6 @@ window.sesInit = () => {
                     throw new Error('bad wrapper')
             }
         }
-
-        /**
-         * mask thrown error in proxy code to prevent it from leaking reference and implementation detail
-         * @param fn
-         */
-        function runSafe<T extends (...args: any[]) => any> (fn: T): ReturnType<T> | ResponseFailed {
-            dropPrototypeRecursive(fn)
-
-            try {
-                return fn()
-            } catch (err) {
-                console.error(err)
-
-                const response = {
-                    success: false,
-                    value: {
-                        type: 'primitive',
-                        value: 'failed'
-                    }
-                } as const
-
-                dropPrototypeRecursive(response)
-
-                return response
-            }
-        }
         
         /**
          * wrap thrown error in this land to another land
@@ -373,24 +344,39 @@ window.sesInit = () => {
             }
         }
 
+        const badPayload: ResponseFailed = {
+            success: false,
+            value: {
+                type: 'primitive',
+                value: 'Internal Error'
+            }
+        }
+
+        dropPrototypeRecursive(badPayload)
 
         // These shouldn't leak refs
         const currentWorld: World = {
             create (world: World) {
-                return unwrap(world.getRoot().value)
+                try {
+                    return unwrap(world.getRoot().value)
+                } catch (err) {
+                    return badPayload
+                }
             },
             getRoot () {
-                return runSafe(() => {
+                try {
                     return dropPrototypeRecursive({
                         success: true,
                         value: toWrapper(root, currentWorld)
                     })
-                })
+                } catch (err) {
+                    return badPayload
+                }
             },
 
             // TODO: redo with custom resolve
             trap_get (unsafeTargetW: ValueWrapper, unsafeKeyW: ValueWrapper, unsafeReceiverW: ValueWrapper) {
-                return runSafe(() => {
+                try {
                     const target = unwrap(unsafeTargetW)
                     const key = unwrap(unsafeKeyW)
                     const receiver = unwrap(unsafeReceiverW)
@@ -401,12 +387,14 @@ window.sesInit = () => {
                             value: toWrapper(FReflect.get(target, key, receiver), currentWorld)
                         })
                     })
-                })
+                } catch (err) {
+                    return badPayload
+                }
             },
 
             // TODO: redo with custom resolve
             trap_set (targetW, keyW, valueW, receiverW) {
-                return runSafe(() => {
+                try {
                     const target = unwrap(targetW)
                     const key = unwrap(keyW)
                     const value = unwrap(valueW)
@@ -418,11 +406,13 @@ window.sesInit = () => {
                             value: toWrapper(FReflect.set(target, key, value, receiver), currentWorld)
                         })
                     })
-                })
+                } catch (err) {
+                    return badPayload
+                }
             },
 
             trap_getOwnPropertyDescriptor (unsafeTargetW: ValueWrapper, unsafeKeyW: ValueWrapper) {
-                return runSafe(() => {
+                try {
                     const target = unwrap(unsafeTargetW)
                     const key = unwrap(unsafeKeyW)
 
@@ -432,11 +422,13 @@ window.sesInit = () => {
                             value: toWrapper(FReflect.getOwnPropertyDescriptor(target, key), currentWorld)
                         }
                     }))
-                })
+                } catch (err) {
+                    return badPayload
+                }
             },
 
             trap_ownKeys (unsafeTargetW: ValueWrapper) {
-                return runSafe(() => {
+                try {
                     const target = unwrap(unsafeTargetW)
 
                     return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
@@ -445,11 +437,13 @@ window.sesInit = () => {
                             value: toWrapper(FReflect.ownKeys(target), currentWorld)
                         }
                     }))
-                })
+                } catch (err) {
+                    return badPayload
+                }
             },
 
             trap_apply (targetW: ValueWrapper, thisArgW: ValueWrapper, argArrayW: ValueWrapper) {
-                return runSafe(() => {
+                try {
                     const target = unwrap(targetW)
                     const thisArg = unwrap(thisArgW)
                     const argArray = unwrap(argArrayW)
@@ -460,11 +454,13 @@ window.sesInit = () => {
                             value: toWrapper(FReflect.apply(target, thisArg, argArray), currentWorld)
                         }
                     }))
-                })
+                } catch (err) {
+                    return badPayload
+                }
             },
 
             trap_construct (targetW: ValueWrapper, argArrayW: ValueWrapper, newTargetW: ValueWrapper) {
-                return runSafe(() => {
+                try {
                     const target = unwrap(targetW)
                     const argArray = unwrap(argArrayW)
                     const newTarget = unwrap(newTargetW)
@@ -475,11 +471,13 @@ window.sesInit = () => {
                             value: toWrapper(FReflect.construct(target, argArray, newTarget), currentWorld)
                         }
                     }))
-                })
+                } catch (err) {
+                    return badPayload
+                }
             },
 
             trap_getPrototypeOf(targetW: ValueWrapper) {
-                return runSafe(() => {
+                try {
                     const target = unwrap(targetW)
 
                     return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
@@ -488,7 +486,9 @@ window.sesInit = () => {
                             value: toWrapper(FReflect.getPrototypeOf(target), currentWorld)
                         }
                     }))
-                })
+                } catch (err) {
+                    return badPayload
+                }
             }
         }
 

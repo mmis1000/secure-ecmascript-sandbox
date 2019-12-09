@@ -18,7 +18,7 @@
 
         document.body.append(iframe)
 
-        const realm = iframe.contentWindow.eval(`
+        let realm = iframe.contentWindow.eval(`
             window.document.title = 'test'
             window.sesInit = ${window.sesInit.toString()}
             const createRoot = window.sesInit()
@@ -30,12 +30,53 @@
         delete iframe.contentWindow.opener
         delete iframe.contentWindow.parent
 
-        // iframe.parentNode.removeChild(iframe)
-        iframe = null
 
         const remote = server.create(realm)
 
+        // say good bye to the iframe, even ourself can't access the `real` sandbox object after this point
+        iframe.remove();
+        iframe = null
+        realm = null
+
         console.log(remote.document.title)
+        remote.eval(`window.document.title = 'test2'`)
+        console.log(remote.document.title)
+
+        remote.console = console
+        remote.main = window
+        remote.mainDoc = document
+        remote.eval(`
+            try {
+                const el = mainDoc.createElement('div')
+                el.textContent = 123
+                mainDoc.body.appendChild(el)
+
+                class Test extends main.HTMLElement {
+                    constructor () {
+                        super()
+                        console.log('hi!')
+                    }
+
+                    connectedCallback() {
+                        console.log('Custom square element added to page.');
+                    }
+                }
+
+                main.customElements.define('my-test', Test);
+
+                const el2 = new Test
+                el2.textContent = 123
+                mainDoc.body.appendChild(el2)
+                mainDoc.body.appendChild(new Test)
+                // console.log(el2 instanceof Test)
+                // console.log(new Test)
+                debugger
+            } catch (err) {
+                debugger
+                console.log(err)
+            }
+            debugger
+        `)
     </script>
 </body>
 </html>
