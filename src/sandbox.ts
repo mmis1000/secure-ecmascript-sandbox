@@ -28,7 +28,10 @@ window.sesInit = () => {
         construct: Reflect.construct,
         ownKeys: Reflect.ownKeys,
         get: Reflect.get,
-        getOwnPropertyDescriptor: Reflect.getOwnPropertyDescriptor
+        set: Reflect.set,
+        getOwnPropertyDescriptor: Reflect.getOwnPropertyDescriptor,
+        apply: Reflect.apply,
+        getPrototypeOf: Reflect.getPrototypeOf
     }
     const FCreateEmpty = Object.create.bind(Object, null)
     const FSetPrototypeOf = Object.setPrototypeOf
@@ -159,16 +162,8 @@ window.sesInit = () => {
             })
         }
 
-
-        const nuzzObject = dropPrototypeRecursive({})
-        const nuzzFunction = dropPrototypeRecursive(function () {})
-
         function toProxy (token: Token, type: 'function' | 'object'): any {
-            const fakeTarget = type == 'function' ? nuzzFunction : nuzzObject
-            const anotherWorld = safeGetProp(token, 'owner' as 'owner')
-            if (!anotherWorld) {
-                throw new Error('bad payload')
-            }
+            const fakeTarget = type === 'object' ? dropPrototypeRecursive({}) : dropPrototypeRecursive(function () {})
 
             const wrapper = {
                 type,
@@ -177,12 +172,32 @@ window.sesInit = () => {
 
             dropPrototypeRecursive(wrapper)
 
+            const anotherWorld = safeGetProp(token, 'owner' as 'owner')
+
+            if (!anotherWorld) {
+                throw new Error('bad payload')
+            }
+
             const proxy = new Proxy(fakeTarget, {
                 get (target, key, receiver) {
                     var res = anotherWorld.trap_get(
-                        wrapper, 
+                        wrapper,
                         dropPrototypeRecursive(toWrapper(key, currentWorld)),
-                        wrapper
+                        dropPrototypeRecursive(toWrapper(receiver, currentWorld))
+                    )
+
+                    if (res.success) {
+                        return unwrap(res.value)
+                    } else {
+                        throw unwrap(res.value)
+                    }
+                },
+                set (target, key, value, receiver) {
+                    var res = anotherWorld.trap_set(
+                        wrapper,
+                        dropPrototypeRecursive(toWrapper(key, currentWorld)),
+                        dropPrototypeRecursive(toWrapper(value, currentWorld)),
+                        dropPrototypeRecursive(toWrapper(receiver, currentWorld))
                     )
 
                     if (res.success) {
@@ -193,8 +208,19 @@ window.sesInit = () => {
                 },
                 getOwnPropertyDescriptor (target, key) {
                     var res = anotherWorld.trap_getOwnPropertyDescriptor(
-                        wrapper, 
+                        wrapper,
                         dropPrototypeRecursive(toWrapper(key, currentWorld))
+                    )
+
+                    if (res.success) {
+                        return { ...unwrap(res.value), configurable: true }
+                    } else {
+                        throw unwrap(res.value)
+                    }
+                },
+                ownKeys (target) {
+                    var res = anotherWorld.trap_ownKeys(
+                        wrapper
                     )
 
                     if (res.success) {
@@ -203,8 +229,34 @@ window.sesInit = () => {
                         throw unwrap(res.value)
                     }
                 },
-                ownKeys (target) {
-                    var res = anotherWorld.trap_ownKeys(
+                apply (target, thisArg, argArray) {
+                    var res = anotherWorld.trap_apply(
+                        wrapper,
+                        dropPrototypeRecursive(toWrapper(thisArg, currentWorld)),
+                        dropPrototypeRecursive(toWrapper(argArray, currentWorld))
+                    )
+
+                    if (res.success) {
+                        return unwrap(res.value)
+                    } else {
+                        throw unwrap(res.value)
+                    }
+                },
+                construct (target, argArray, newTarget) {
+                    var res = anotherWorld.trap_construct(
+                        wrapper,
+                        dropPrototypeRecursive(toWrapper(argArray, currentWorld)),
+                        dropPrototypeRecursive(toWrapper(newTarget, currentWorld))
+                    )
+
+                    if (res.success) {
+                        return unwrap(res.value)
+                    } else {
+                        throw unwrap(res.value)
+                    }
+                },
+                getPrototypeOf(target) {
+                    var res = anotherWorld.trap_getPrototypeOf(
                         wrapper
                     )
 
@@ -336,6 +388,7 @@ window.sesInit = () => {
                 })
             },
 
+            // TODO: redo with custom resolve
             trap_get (unsafeTargetW: ValueWrapper, unsafeKeyW: ValueWrapper, unsafeReceiverW: ValueWrapper) {
                 return runSafe(() => {
                     const target = unwrap(unsafeTargetW)
@@ -346,6 +399,23 @@ window.sesInit = () => {
                         return dropPrototypeRecursive({
                             success: true,
                             value: toWrapper(FReflect.get(target, key, receiver), currentWorld)
+                        })
+                    })
+                })
+            },
+
+            // TODO: redo with custom resolve
+            trap_set (targetW, keyW, valueW, receiverW) {
+                return runSafe(() => {
+                    const target = unwrap(targetW)
+                    const key = unwrap(keyW)
+                    const value = unwrap(valueW)
+                    const receiver = unwrap(receiverW)
+
+                    return wrapThrow(currentWorld, () => {
+                        return dropPrototypeRecursive({
+                            success: true,
+                            value: toWrapper(FReflect.set(target, key, value, receiver), currentWorld)
                         })
                     })
                 })
@@ -373,6 +443,49 @@ window.sesInit = () => {
                         return {
                             success: true,
                             value: toWrapper(FReflect.ownKeys(target), currentWorld)
+                        }
+                    }))
+                })
+            },
+
+            trap_apply (targetW: ValueWrapper, thisArgW: ValueWrapper, argArrayW: ValueWrapper) {
+                return runSafe(() => {
+                    const target = unwrap(targetW)
+                    const thisArg = unwrap(thisArgW)
+                    const argArray = unwrap(argArrayW)
+
+                    return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
+                        return {
+                            success: true,
+                            value: toWrapper(FReflect.apply(target, thisArg, argArray), currentWorld)
+                        }
+                    }))
+                })
+            },
+
+            trap_construct (targetW: ValueWrapper, argArrayW: ValueWrapper, newTargetW: ValueWrapper) {
+                return runSafe(() => {
+                    const target = unwrap(targetW)
+                    const argArray = unwrap(argArrayW)
+                    const newTarget = unwrap(newTargetW)
+
+                    return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
+                        return {
+                            success: true,
+                            value: toWrapper(FReflect.construct(target, argArray, newTarget), currentWorld)
+                        }
+                    }))
+                })
+            },
+
+            trap_getPrototypeOf(targetW: ValueWrapper) {
+                return runSafe(() => {
+                    const target = unwrap(targetW)
+
+                    return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
+                        return {
+                            success: true,
+                            value: toWrapper(FReflect.getPrototypeOf(target), currentWorld)
                         }
                     }))
                 })
