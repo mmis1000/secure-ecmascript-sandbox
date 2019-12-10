@@ -23,7 +23,7 @@
     - So it can't leak constructor and whatever
     - `Even the service itself is untrustworthy`
 2. service must not leak real object and any object prototype to service in another world
-    - Object must be represent ans token when communicate with service in another world
+    - Object must be represent as token when communicate with service in another world
     - Minimize the attack surface
     - So you still can't get the real object even the service itself is pwned
     - `Even the service itself is untrustworthy`
@@ -43,3 +43,34 @@
     - e.g. `({}).prop = 'whatever'`
     - It cause script run in same world able to add getter to the `Object.prototype` and break service
 
+# Warning
+
+Edge Current always leak buildins through Function.caller because all buildins are non strict function
+Makes it completely impossible to safely access untrustworthy object property descriptor
+
+POC:
+
+```js
+const foo = { bar: 1 }
+function getOwnPropertyDescriptor () {
+    console.log('caller be', arguments.callee.caller)
+}
+const untrustworthyObject = new Proxy(foo, {
+    getOwnPropertyDescriptor
+})
+
+const safeGetDescriptor = (baz) => {
+    'use strict'
+    Reflect.getOwnPropertyDescriptor(baz, 'bar')
+}
+
+safeGetDescriptor(untrustworthyObject)
+```
+
+result in 
+
+```txt
+caller be function getOwnPropertyDescriptor() { [native code] }
+```
+
+under Edge 44.18362.449.0
