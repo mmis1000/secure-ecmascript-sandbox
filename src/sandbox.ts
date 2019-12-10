@@ -1,9 +1,11 @@
 namespace SES {
+    // this need to be run before any other script to get properly untainted global
     export function init () {
         'use strict';
         // disable caller attack on the stack
-        
 
+        // Must not use any global object
+        // And using only the frozen object returns from makeShared
         const shared = makeShared()
 
         const FError = shared.FError

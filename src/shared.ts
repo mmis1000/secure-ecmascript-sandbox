@@ -2,6 +2,8 @@ namespace SES {
     export function makeShared () {
         'use strict';
 
+        // function/object that prefixed with F (which means the binding is frozen after the return)
+
         const FError = Error
 
         const FCall = Function.prototype.call
