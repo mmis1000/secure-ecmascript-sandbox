@@ -48,7 +48,7 @@
 Edge Current always leak buildins through Function.caller because all buildins are non strict function
 Makes it completely impossible to safely access untrustworthy object property descriptor
 
-POC:
+## POC:
 
 ```js
 const foo = { bar: 1 }
@@ -67,10 +67,12 @@ const safeGetDescriptor = (baz) => {
 safeGetDescriptor(untrustworthyObject)
 ```
 
-result in 
+## Result under Edge 44.18362.449.0
 
 ```txt
 caller be function getOwnPropertyDescriptor() { [native code] }
 ```
 
-under Edge 44.18362.449.0
+## See also
+
+https://github.com/Jack-Works/proposal-strict-built-in-functions
