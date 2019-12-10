@@ -45,7 +45,7 @@
 
 # Warning
 
-Edge Current always leak buildins through Function.caller because all buildins are non strict function
+Edge Current always leak buildins through Function.caller because all buildins are non strict function.  
 Makes it completely impossible to safely access untrustworthy object property descriptor
 
 ## POC:
