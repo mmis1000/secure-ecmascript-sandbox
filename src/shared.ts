@@ -84,9 +84,6 @@ namespace SES {
             FBind,
             FMap,
             FWeakMap,
-            // FWeakMapHas,
-            // FWeakMapSet,
-            // FWeakMapGet,
             FBWeakMapHas,
             FBWeakMapSet,
             FBWeakMapGet,
@@ -108,4 +105,6 @@ namespace SES {
 
         return shared
     }
+
+    export type IShared = ReturnType<typeof makeShared>
 }
