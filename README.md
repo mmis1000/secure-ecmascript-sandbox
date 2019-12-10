@@ -43,6 +43,10 @@
     - e.g. `({}).prop = 'whatever'`
     - It cause script run in same world able to add getter to the `Object.prototype` and break service
 
+## Architecture
+
+![The Architecture](./SES-arch.png)
+
 # Warning
 
 Edge Current always leak buildins through Function.caller because all buildins are non strict function.  
