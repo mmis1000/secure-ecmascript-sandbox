@@ -9,7 +9,7 @@
 <body>
     <script src="../lib/sandbox.js"></script>
     <script>
-        const createRoot = window.sesInit()
+        const createRoot = window.SES.init()
         const server = createRoot(window)
 
         let iframe = document.createElement('iframe')
@@ -19,9 +19,22 @@
         document.body.append(iframe)
 
         let realm = iframe.contentWindow.eval(`
-            window.document.title = 'test'
-            window.sesInit = ${window.sesInit.toString()}
-            const createRoot = window.sesInit()
+            "use strict";
+
+            window.document.title = 'testRealm'
+
+            var SES;
+            ;(function (SES) {
+                "use strict";
+                ${window.SES.init.toString()}
+                ${window.SES.makeShared.toString()}
+                SES.init = init
+                SES.makeShared = makeShared
+            }(SES || (SES = {})))
+
+            window.SES = SES
+
+            const createRoot = window.SES.init()
             const server = createRoot(window)
             server
         `)

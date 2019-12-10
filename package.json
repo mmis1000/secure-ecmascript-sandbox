@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "npx -p typescript tsc -w",
-    "serve": "npx serve"
+    "serve": "npx serve -p 9000"
   },
   "author": "",
   "license": "ISC"
