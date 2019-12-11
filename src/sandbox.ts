@@ -31,6 +31,7 @@ namespace SES {
         const FGetOwnPropertyDescriptor = shared.FGetOwnPropertyDescriptor
     
         const FBArrayMap = shared.FBArrayMap
+        const FBArrayToIterator = shared.FBArrayToIterator
 
         return function createServer<T>(root: T) {
             /**
@@ -53,10 +54,17 @@ namespace SES {
                     if (!shared.FIsFrozen) {
                         throw new FError('tainted object!!!')
                     }
+
+                    // the object may use timing attack to by pass get prototype check
+                    // because it is not frozen at that time
+                    if (FGetPrototypeOf(unsafeObj) !== null) {
+                        throw new FError('PROTOTYPE LEAKING!!!')
+                    }
     
                     FBWeakMapSet(record, unsafeObj, true)
     
                     // burst it no matter it is enumerable or not
+                    // nothing should ever leak
                     var keys = FReflect.ownKeys(/** @type {any} */(unsafeObj))
     
                     for (let i = 0; i < keys.length; i++) {
@@ -301,37 +309,55 @@ namespace SES {
                 }
             }
             
-            /**
-             * wrap thrown error in this land to another land
-             * @param fn
-             */
-            function wrapThrow<T extends (...args: any[]) => any> (world: World, fn: T): ReturnType<T> | ResponseFailed {
-                dropPrototypeRecursive(fn)
-    
-                try {
-                    return fn()
-                } catch (err) {
-                    const response = {
-                        success: false,
-                        value: toWrapper(err, world)
-                    } as const
-    
-                    dropPrototypeRecursive(response)
-    
-                    return response
-                }
-            }
-    
-            const badPayload: ResponseFailed = {
+
+            // this need to be initialized out side of service catch, so it can't throw yet another overflow
+            const badPayload: ResponseFailed = dropPrototypeRecursive({
                 success: false,
                 value: {
                     type: 'primitive',
                     value: 'Internal Error'
                 }
+            })
+
+            type MapToWrapper<T> = {
+                [Key in keyof T]: ValueWrapper
             }
+
+            type BeArray<T> = T extends any[] ? T : never
+
+            function createHandler<
+                T extends keyof typeof FReflect,
+                U extends (typeof FReflect)[T],
+                V extends BeArray<MapToWrapper<Parameters<U>>>,
+            > (key: T) {
+                return function (...args: V) {
+                    try {
+                        const unwrapped = FBArrayMap(args, (i: ValueWrapper) => unwrap(i))
     
-            dropPrototypeRecursive(badPayload)
-    
+                        let value: any
+                        let success: boolean
+
+                        // start of zone that user mat throw error
+                        try {
+                            value = FReflect.apply(FReflect[key], null, unwrapped)
+                            success = true
+                        } catch (err) {
+                            success = false
+                            value = err
+                        }
+                        // end of zone
+
+                        return dropPrototypeRecursive({
+                            success,
+                            value: toWrapper(value, currentWorld)
+                        })
+                    } catch (err) {
+                        // just don't touch any function because it may cause yet another stack overflow here
+                        return badPayload
+                    }
+                }
+            }
+
             // These shouldn't leak refs
             const currentWorld: World = {
                 create (world: World) {
@@ -353,216 +379,32 @@ namespace SES {
                 },
     
                 // TODO: redo with custom resolve
-                trap_get (unsafeTargetW: ValueWrapper, unsafeKeyW: ValueWrapper, unsafeReceiverW: ValueWrapper) {
-                    try {
-                        const target = unwrap(unsafeTargetW)
-                        const key = unwrap(unsafeKeyW)
-                        const receiver = unwrap(unsafeReceiverW)
-    
-                        return wrapThrow(currentWorld, () => {
-                            return dropPrototypeRecursive({
-                                success: true,
-                                value: toWrapper(FReflect.get(target, key, receiver), currentWorld)
-                            })
-                        })
-                    } catch (err) {
-                        return { ...badPayload, err }
-                    }
-                },
+                trap_get: createHandler('get'),
     
                 // TODO: redo with custom resolve
-                trap_set (targetW, keyW, valueW, receiverW) {
-                    try {
-                        const target = unwrap(targetW)
-                        const key = unwrap(keyW)
-                        const value = unwrap(valueW)
-                        const receiver = unwrap(receiverW)
+                trap_set: createHandler('set'),
     
-                        return wrapThrow(currentWorld, () => {
-                            return dropPrototypeRecursive({
-                                success: true,
-                                value: toWrapper(FReflect.set(target, key, value, receiver), currentWorld)
-                            })
-                        })
-                    } catch (err) {
-                        return badPayload
-                    }
-                },
+                trap_getOwnPropertyDescriptor: createHandler('getOwnPropertyDescriptor'),
     
-                trap_getOwnPropertyDescriptor (unsafeTargetW: ValueWrapper, unsafeKeyW: ValueWrapper) {
-                    try {
-                        const target = unwrap(unsafeTargetW)
-                        const key = unwrap(unsafeKeyW)
+                trap_ownKeys: createHandler('ownKeys'),
     
-                        return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
-                            return {
-                                success: true,
-                                value: toWrapper(FReflect.getOwnPropertyDescriptor(target, key), currentWorld)
-                            }
-                        }))
-                    } catch (err) {
-                        return badPayload
-                    }
-                },
+                trap_apply: createHandler('apply'),
     
-                trap_ownKeys (unsafeTargetW: ValueWrapper) {
-                    try {
-                        const target = unwrap(unsafeTargetW)
+                trap_construct: createHandler('construct'),
     
-                        return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
-                            return {
-                                success: true,
-                                value: toWrapper(FReflect.ownKeys(target), currentWorld)
-                            }
-                        }))
-                    } catch (err) {
-                        return badPayload
-                    }
-                },
+                trap_getPrototypeOf: createHandler('getPrototypeOf'),
     
-                trap_apply (targetW: ValueWrapper, thisArgW: ValueWrapper, argArrayW: ValueWrapper) {
-                    try {
-                        const target = unwrap(targetW)
-                        const thisArg = unwrap(thisArgW)
-                        const argArray = unwrap(argArrayW)
+                trap_defineProperty: createHandler('defineProperty'),
     
-                        return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
-                            return {
-                                success: true,
-                                value: toWrapper(FReflect.apply(target, thisArg, argArray), currentWorld)
-                            }
-                        }))
-                    } catch (err) {
-                        return badPayload
-                    }
-                },
+                trap_setPrototypeOf: createHandler('setPrototypeOf'),
     
-                trap_construct (targetW: ValueWrapper, argArrayW: ValueWrapper, newTargetW: ValueWrapper) {
-                    try {
-                        const target = unwrap(targetW)
-                        const argArray = unwrap(argArrayW)
-                        const newTarget = unwrap(newTargetW)
+                trap_isExtensible: createHandler('isExtensible'),
     
-                        return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
-                            return {
-                                success: true,
-                                value: toWrapper(FReflect.construct(target, argArray, newTarget), currentWorld)
-                            }
-                        }))
-                    } catch (err) {
-                        return badPayload
-                    }
-                },
+                trap_preventExtensions: createHandler('preventExtensions'),
     
-                trap_getPrototypeOf(targetW: ValueWrapper) {
-                    try {
-                        const target = unwrap(targetW)
+                trap_has: createHandler('has'),
     
-                        return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
-                            return {
-                                success: true,
-                                value: toWrapper(FReflect.getPrototypeOf(target), currentWorld)
-                            }
-                        }))
-                    } catch (err) {
-                        return badPayload
-                    }
-                },
-    
-                trap_defineProperty(targetW: ValueWrapper, keyW: ValueWrapper, attributesW: ValueWrapper) {
-                    try {
-                        const target = unwrap(targetW)
-                        const key = unwrap(keyW)
-                        const attributes = unwrap(attributesW)
-    
-                        return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
-                            return {
-                                success: true,
-                                value: toWrapper(FReflect.defineProperty(target, key, attributes), currentWorld)
-                            }
-                        }))
-                    } catch (err) {
-                        return badPayload
-                    }
-                },
-    
-                trap_setPrototypeOf (targetW, prototypeW) {
-                    try {
-                        const target = unwrap(targetW)
-                        const prototype = unwrap(prototypeW)
-    
-                        return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
-                            return {
-                                success: true,
-                                value: toWrapper(FReflect.setPrototypeOf(target, prototype), currentWorld)
-                            }
-                        }))
-                    } catch (err) {
-                        return badPayload
-                    }
-                },
-    
-                trap_isExtensible (targetW) {
-                    try {
-                        const target = unwrap(targetW)
-    
-                        return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
-                            return {
-                                success: true,
-                                value: toWrapper(FReflect.isExtensible(target), currentWorld)
-                            }
-                        }))
-                    } catch (err) {
-                        return badPayload
-                    }
-                },
-    
-                trap_preventExtensions (targetW) {
-                    try {
-                        const target = unwrap(targetW)
-    
-                        return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
-                            return {
-                                success: true,
-                                value: toWrapper(FReflect.preventExtensions(target), currentWorld)
-                            }
-                        }))
-                    } catch (err) {
-                        return badPayload
-                    }
-                },
-    
-                trap_has (targetW, keyW) {
-                    try {
-                        const target = unwrap(targetW)
-                        const key = unwrap(keyW)
-    
-                        return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
-                            return {
-                                success: true,
-                                value: toWrapper(FReflect.has(target, key), currentWorld)
-                            }
-                        }))
-                    } catch (err) {
-                        return badPayload
-                    }
-                },
-    
-                trap_deleteProperty (targetW, keyW) {
-                    try {
-                        const target = unwrap(targetW)
-                        const key = unwrap(keyW)
-    
-                        return dropPrototypeRecursive(wrapThrow(currentWorld, () => {
-                            return {
-                                success: true,
-                                value: toWrapper(FReflect.deleteProperty(target, key), currentWorld)
-                            }
-                        }))
-                    } catch (err) {
-                        return badPayload
-                    }
-                }
+                trap_deleteProperty: createHandler('deleteProperty')
             }
     
             dropPrototypeRecursive(currentWorld)
