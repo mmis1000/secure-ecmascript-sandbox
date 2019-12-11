@@ -329,22 +329,25 @@ namespace SES {
             ;(function (SES) {
                 "use strict";
         `
+
         for (let key of keys) {
             text += `
                 const ${key} = ${obj[key].toString()}
             `
         }
+
         for (let key of keys) {
             text += `
                 SES.${key} = ${key}
             `
         }
+
         text += `
             }(SES || (SES = {})))
 
             window.SES = SES
         `
-        console.log(text)
+
         return text
     }
 }
