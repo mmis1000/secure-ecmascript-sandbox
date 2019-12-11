@@ -1,5 +1,5 @@
 namespace SES {
-    export function createProxyFactory (
+    export function createProxyFactory(
         shared: ReturnType<typeof SES.makeShared>,
         unwrap: Iunwrap,
         toWrapper: ItoWrapper,
@@ -18,23 +18,23 @@ namespace SES {
         const FCall = shared.FCall
         const FApply = shared.FApply
         const FBind = shared.FBind
-    
+
         const FMap = shared.FMap
-    
+
         const FWeakMap = shared.FWeakMap
-    
+
         const FBWeakMapHas = shared.FBWeakMapHas
         const FBWeakMapSet = shared.FBWeakMapSet
         const FBWeakMapGet = shared.FBWeakMapGet
-    
+
         const FReflect = shared.FReflect
 
         const FCreateEmpty = shared.FCreateEmpty
         const FSetPrototypeOf = shared.FSetPrototypeOf
         const FGetPrototypeOf = shared.FGetPrototypeOf
-    
+
         const FGetOwnPropertyDescriptor = shared.FGetOwnPropertyDescriptor
-    
+
         const FBArrayMap = shared.FBArrayMap
         const FBArrayToIterator = shared.FBArrayToIterator
         const FResolveDesc = shared.FResolveDesc
@@ -43,8 +43,8 @@ namespace SES {
         const safeGetProp = shared.safeGetProp
 
 
-        return function createProxy (token: Token, type: 'function' | 'object'): any {
-            const fakeTarget = type === 'object' ? {} : function () {}
+        return function createProxy(token: Token, type: 'function' | 'object'): any {
+            const fakeTarget = type === 'object' ? {} : function () { }
 
             const wrapper = {
                 type,
@@ -75,7 +75,7 @@ namespace SES {
                 }
             }
 
-            function freezeFakeIfNecessary () {
+            function freezeFakeIfNecessary() {
                 if (FReflect.isExtensible(fakeTarget)) {
                     // it is already freezed, isn't it?
                     return
@@ -94,20 +94,20 @@ namespace SES {
                         FReflect.defineProperty(fakeTarget, keys[i], desc)
                     }
 
-                    FReflect.preventExtensions(fakeTarget)                        
+                    FReflect.preventExtensions(fakeTarget)
                 }
             }
 
             // @ts-ignore
             const proxy = new Proxy(fakeTarget, {
-                get (target, key, receiver) {
+                get(target, key, receiver) {
                     if (FReflect.getOwnPropertyDescriptor(proxy, key)) {
                         var res = anotherWorld.trap_get(
                             wrapper,
                             dropPrototypeRecursive(toWrapper(key, currentWorld)),
                             dropPrototypeRecursive(toWrapper(receiver, currentWorld))
                         )
-    
+
                         if (res.success) {
                             return unwrap(res.value)
                         } else {
@@ -129,7 +129,7 @@ namespace SES {
                         }
                     }
                 },
-                set (target, key, value, receiver) {
+                set(target, key, value, receiver) {
                     const desc = FResolveDesc(proxy, key)
 
                     if (desc === undefined || 'value' in desc) {
@@ -139,7 +139,7 @@ namespace SES {
                             dropPrototypeRecursive(toWrapper(value, currentWorld)),
                             dropPrototypeRecursive(toWrapper(receiver, currentWorld))
                         )
-    
+
                         if (res.success) {
                             return unwrap(res.value)
                         } else {
@@ -152,7 +152,7 @@ namespace SES {
                     }
                 },
                 // this need to be specially handled
-                getOwnPropertyDescriptor (target, key) {
+                getOwnPropertyDescriptor(target, key) {
                     var res = anotherWorld.trap_getOwnPropertyDescriptor(
                         wrapper,
                         dropPrototypeRecursive(toWrapper(key, currentWorld))
@@ -181,14 +181,14 @@ namespace SES {
                 ownKeys: createHandler('trap_ownKeys'),
                 apply: createHandler('trap_apply'),
                 construct: createHandler('trap_construct'),
-                getPrototypeOf (...args) {
+                getPrototypeOf(...args) {
                     const res = createHandler('trap_getPrototypeOf')(...args)
                     Reflect.setPrototypeOf(fakeTarget, res)
                     return res
                 },
                 setPrototypeOf: createHandler('trap_setPrototypeOf'),
                 // this will crash if not handled correctly, so it also need to be specially handled
-                isExtensible (target) {
+                isExtensible(target) {
                     var res = anotherWorld.trap_isExtensible(
                         wrapper
                     )
@@ -206,7 +206,7 @@ namespace SES {
                     }
                 },
                 preventExtensions: createHandler('trap_preventExtensions'),
-                has (target, key) {
+                has(target, key) {
                     const desc = FResolveDesc(proxy, key)
                     return desc === undefined
                 },

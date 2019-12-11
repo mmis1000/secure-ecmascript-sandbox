@@ -1,6 +1,6 @@
 namespace SES {
     // this need to be run before any other script to get properly untainted global
-    export function init () {
+    export function init() {
         'use strict';
         // disable caller attack on the stack
 
@@ -13,23 +13,23 @@ namespace SES {
         const FCall = shared.FCall
         const FApply = shared.FApply
         const FBind = shared.FBind
-    
+
         const FMap = shared.FMap
-    
+
         const FWeakMap = shared.FWeakMap
-    
+
         const FBWeakMapHas = shared.FBWeakMapHas
         const FBWeakMapSet = shared.FBWeakMapSet
         const FBWeakMapGet = shared.FBWeakMapGet
-    
+
         const FReflect = shared.FReflect
 
         const FCreateEmpty = shared.FCreateEmpty
         const FSetPrototypeOf = shared.FSetPrototypeOf
         const FGetPrototypeOf = shared.FGetPrototypeOf
-    
+
         const FGetOwnPropertyDescriptor = shared.FGetOwnPropertyDescriptor
-    
+
         const FBArrayMap = shared.FBArrayMap
         const FBArrayToIterator = shared.FBArrayToIterator
         const FResolveDesc = shared.FResolveDesc
@@ -38,20 +38,20 @@ namespace SES {
         const safeGetProp = shared.safeGetProp
 
         return function createServer<T>(root: T) {
-    
+
             // real object in this world to token
             const realToToken = new FWeakMap<object, Token>()
-    
+
             // token to real object in this world
             const tokenToReal = new FWeakMap<Token, object>()
-    
+
             // token from external world to proxy in this world
             const tokenToProxy = new FWeakMap<Token, object>()
-    
+
             // proxy in this world to token from external
             const proxyToToken = new FWeakMap<object, Token>()
-    
-     
+
+
             /**
              * get a safe token that represent this object
              * @param obj 
@@ -60,39 +60,39 @@ namespace SES {
                 if (proxyToToken.has(obj)) {
                     return proxyToToken.get(obj)!
                 }
-    
+
                 if (realToToken.has(obj)) {
                     return realToToken.get(obj)!
                 }
-    
+
                 var token: Token = FCreateEmpty({})
-    
+
                 token.owner = world
                 token.type = type
-    
+
                 FBWeakMapSet(realToToken, obj, token)
                 FBWeakMapSet(tokenToReal, token, obj)
-    
+
                 return token
             }
-    
-            function unwrapToken (token: Token): any {
+
+            function unwrapToken(token: Token): any {
                 if (FBWeakMapHas(tokenToReal, token)) {
                     return FBWeakMapGet(tokenToReal, token)
                 }
-    
+
                 if (FBWeakMapHas(tokenToProxy, token)) {
                     return FBWeakMapGet(tokenToProxy, token)
                 }
-    
+
                 // to fake
                 const type: string | null = FReflect.get(token, 'type')
                 const world: World = FReflect.get(token, 'owner')
-    
+
                 if (world === currentWorld) {
                     throw new FError('Unexpected owner of current world')
                 }
-    
+
                 switch (type) {
                     case 'function':
                         return createProxy(token, 'function')
@@ -103,14 +103,14 @@ namespace SES {
                 }
             }
 
-            function toWrapper (obj: any, world: World): ValueWrapper {
+            function toWrapper(obj: any, world: World): ValueWrapper {
                 if (obj === null) {
                     return {
                         type: 'primitive',
                         value: obj
                     }
                 }
-    
+
                 switch (typeof obj) {
                     case 'bigint':
                     case 'boolean':
@@ -136,8 +136,8 @@ namespace SES {
                         throw new FError('how is this possible?')
                 }
             }
-    
-            function toRecord (obj: any, world: World): ValueWrapper {
+
+            function toRecord(obj: any, world: World): ValueWrapper {
                 const keys = FReflect.ownKeys(obj)
                 const target: ValueWrapperRecord = FCreateEmpty({}) as any
                 target.type = 'record'
@@ -150,22 +150,22 @@ namespace SES {
                 return target
             }
 
-            function unwrap (unsafeObj: ValueWrapper): any {
+            function unwrap(unsafeObj: ValueWrapper): any {
                 switch (safeGetProp(unsafeObj, 'type')) {
                     case 'primitive':
                         const value = safeGetProp(unsafeObj, 'value')
-    
+
                         if (value != null && (typeof value === 'function' || typeof value === 'object')) {
                             throw new FError('bad')
                         }
-    
+
                         return value
                     case 'function':
                     case 'object':
                         return unwrapToken(safeGetProp(unsafeObj, 'value') as any)
                     case 'record': {
                         const result = FCreateEmpty({})
-                        const value = safeGetProp(unsafeObj, 'value') as { [key: string]: ValueWrapper}
+                        const value = safeGetProp(unsafeObj, 'value') as { [key: string]: ValueWrapper }
 
                         for (let key of FBArrayToIterator(FReflect.ownKeys(value))) {
                             result[key] = unwrap(value[key])
@@ -177,7 +177,7 @@ namespace SES {
                         throw new FError('bad wrapper')
                 }
             }
-            
+
 
             // this need to be initialized outside of service catch, so it can't throw yet another stack overflow
             const badPayload: ResponseFailed = dropPrototypeRecursive({
@@ -198,11 +198,11 @@ namespace SES {
                 T extends keyof typeof FReflect,
                 U extends (typeof FReflect)[T],
                 V extends BeArray<MapToWrapper<Parameters<U>>>,
-            > (key: T) {
+                >(key: T) {
                 return function (...args: V) {
                     try {
                         const unwrapped = FBArrayMap(args, (i: ValueWrapper) => unwrap(i))
-    
+
                         let value: any
                         let success: boolean
 
@@ -230,7 +230,7 @@ namespace SES {
 
             // These shouldn't leak refs
             const currentWorld: World = {
-                create (world: World) {
+                create(world: World) {
                     try {
                         return unwrap(world.getRoot().value)
                     } catch (err) {
@@ -238,7 +238,7 @@ namespace SES {
                         return badPayload
                     }
                 },
-                getRoot () {
+                getRoot() {
                     try {
                         return dropPrototypeRecursive({
                             success: true,
@@ -249,19 +249,19 @@ namespace SES {
                         return badPayload
                     }
                 },
-    
+
                 // TODO: redo with custom resolve
                 trap_get: createHandler('get'),
-    
+
                 // TODO: redo with custom resolve
                 trap_set: createHandler('set'),
-    
+
                 // trap_getOwnPropertyDescriptor: createHandler('getOwnPropertyDescriptor'),
-                trap_getOwnPropertyDescriptor (tokenW: ValueWrapper, keyW: ValueWrapper) {
+                trap_getOwnPropertyDescriptor(tokenW: ValueWrapper, keyW: ValueWrapper) {
                     try {
                         const token = unwrap(tokenW)
                         const key = unwrap(keyW)
-    
+
                         let value: any
                         let success: boolean
                         let wrapped: any
@@ -276,7 +276,7 @@ namespace SES {
 
                         return dropPrototypeRecursive({
                             success,
-                            value: success && typeof value === 'object' ? toRecord(value, currentWorld): toWrapper(value, currentWorld)
+                            value: success && typeof value === 'object' ? toRecord(value, currentWorld) : toWrapper(value, currentWorld)
                         })
                     } catch (err) {
                         console.log(err)
@@ -284,31 +284,31 @@ namespace SES {
                         return badPayload
                     }
                 },
-    
+
                 trap_ownKeys: createHandler('ownKeys'),
-    
+
                 trap_apply: createHandler('apply'),
-    
+
                 trap_construct: createHandler('construct'),
-    
+
                 trap_getPrototypeOf: createHandler('getPrototypeOf'),
-    
+
                 trap_defineProperty: createHandler('defineProperty'),
-    
+
                 trap_setPrototypeOf: createHandler('setPrototypeOf'),
-    
+
                 trap_isExtensible: createHandler('isExtensible'),
-    
+
                 trap_preventExtensions: createHandler('preventExtensions'),
-    
+
                 trap_has: createHandler('has'),
-    
+
                 trap_deleteProperty: createHandler('deleteProperty')
             }
 
             dropPrototypeRecursive(currentWorld)
-    
-            const createProxy = createProxyFactory (
+
+            const createProxy = createProxyFactory(
                 shared,
                 unwrap,
                 toWrapper,
@@ -316,12 +316,12 @@ namespace SES {
                 proxyToToken,
                 tokenToProxy
             )
-    
+
             return currentWorld
         }
     }
 
-    export function createScript (obj: any) {
+    export function createScript(obj: any) {
         const keys = Object.keys(obj)
 
         let text = `

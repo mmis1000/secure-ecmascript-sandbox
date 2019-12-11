@@ -1,5 +1,5 @@
 namespace SES {
-    export function makeShared () {
+    export function makeShared() {
         'use strict';
 
         // function/object that prefixed with F (which means the binding is frozen after the return)
@@ -9,21 +9,21 @@ namespace SES {
         const FCall = Function.prototype.call
         const FApply = Function.prototype.apply
         const FBind = Function.prototype.bind
-    
+
         const FMap = Map
-    
+
         const FWeakMap = WeakMap
         const FWeakMapHas = WeakMap.prototype.has
         const FWeakMapSet = WeakMap.prototype.set
         const FWeakMapGet = WeakMap.prototype.get
-    
+
         const FBWeakMapHas = FCall.bind(FWeakMapHas)
         const FBWeakMapSet = FCall.bind(FWeakMapSet)
         const FBWeakMapGet = FCall.bind(FWeakMapGet)
 
         const FArrayMap = Array.prototype.map
         const FBArrayMap = FCall.bind(FArrayMap)
-    
+
         const FReflect: typeof Reflect = {
             // ...Reflect,
             construct: Reflect.construct,
@@ -44,7 +44,7 @@ namespace SES {
         const FCreateEmpty = Object.create.bind(Object, null)
         const FSetPrototypeOf = Object.setPrototypeOf
         const FGetPrototypeOf = Object.getPrototypeOf
-    
+
         const FGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor
 
         const FFreeze = Object.freeze
@@ -74,7 +74,7 @@ namespace SES {
                 [Symbol.iterator]: any
             } = {
                 next,
-                [SymbolIterator]: function() { return this }
+                [SymbolIterator]: function () { return this }
             } as any
 
             return value
@@ -93,7 +93,7 @@ namespace SES {
                 const desc = FReflect.getOwnPropertyDescriptor(currentTarget, key)
 
                 if (desc !== undefined) {
-                    FSetPrototypeOf(desc ,null)
+                    FSetPrototypeOf(desc, null)
 
                     return desc
                 }
@@ -163,7 +163,7 @@ namespace SES {
                     throw "value desk does not exist"
                 }
 
-                return 'value' in valueDesc ? valueDesc.value :　null
+                return 'value' in valueDesc ? valueDesc.value : null
             } catch (err) {
                 FConsoleError('BAD ACTOR', unsafeObj, name)
                 throw 'This shouldn\'t happen'

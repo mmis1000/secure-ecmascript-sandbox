@@ -44,16 +44,16 @@ namespace SES {
     }
 
     export interface World {
-        create(world: World) :any
+        create(world: World): any
         getRoot(): Response
 
-        trap_get (token: ValueWrapper, key: ValueWrapper, receiverToken: ValueWrapper): Response
-        trap_set (target: ValueWrapper, key: ValueWrapper, value: ValueWrapper, receiver: ValueWrapper): Response
-        trap_getOwnPropertyDescriptor (token: ValueWrapper, key: ValueWrapper): Response
+        trap_get(token: ValueWrapper, key: ValueWrapper, receiverToken: ValueWrapper): Response
+        trap_set(target: ValueWrapper, key: ValueWrapper, value: ValueWrapper, receiver: ValueWrapper): Response
+        trap_getOwnPropertyDescriptor(token: ValueWrapper, key: ValueWrapper): Response
         trap_defineProperty(target: ValueWrapper, key: ValueWrapper, attributes: ValueWrapper): Response
-        trap_ownKeys (token: ValueWrapper): Response
-        trap_apply (target: ValueWrapper, thisArg: ValueWrapper, argArray: ValueWrapper): Response
-        trap_construct (target: ValueWrapper, argArray: ValueWrapper, newTarget: ValueWrapper): Response
+        trap_ownKeys(token: ValueWrapper): Response
+        trap_apply(target: ValueWrapper, thisArg: ValueWrapper, argArray: ValueWrapper): Response
+        trap_construct(target: ValueWrapper, argArray: ValueWrapper, newTarget: ValueWrapper): Response
         trap_getPrototypeOf(target: ValueWrapper): Response
         trap_setPrototypeOf(target: ValueWrapper, prototype: ValueWrapper): Response
 
@@ -63,10 +63,10 @@ namespace SES {
         trap_deleteProperty(target: ValueWrapper, key: ValueWrapper): Response
     }
 
-    export interface ItoToken<T extends object>{
+    export interface ItoToken<T extends object> {
         (obj: T, world: World, type: 'function' | 'object'): Token
     }
-    export interface IunwrapToken{
+    export interface IunwrapToken {
         (token: Token): any
     }
     export interface ItoWrapper {
