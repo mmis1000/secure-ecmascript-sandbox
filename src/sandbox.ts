@@ -32,6 +32,7 @@ namespace SES {
     
         const FBArrayMap = shared.FBArrayMap
         const FBArrayToIterator = shared.FBArrayToIterator
+        const FResolveDesc = shared.FResolveDesc
 
         return function createServer<T>(root: T) {
             /**
@@ -158,15 +159,15 @@ namespace SES {
     
                 switch (type) {
                     case 'function':
-                        return toProxy(token, 'function')
+                        return createProxy(token, 'function')
                     case 'object':
-                        return toProxy(token, 'object')
+                        return createProxy(token, 'object')
                     default:
                         throw new FError('bad type')
                 }
             }
     
-            function toProxy (token: Token, type: 'function' | 'object'): any {
+            function createProxy (token: Token, type: 'function' | 'object'): any {
                 const fakeTarget = type === 'object' ? {} : function () {}
     
                 const wrapper = {
@@ -198,11 +199,82 @@ namespace SES {
                     }
                 }
 
+                function freezeFakeIfNecessary () {
+                    if (FReflect.isExtensible(fakeTarget)) {
+                        // it is already freezed, isn't it?
+                        return
+                    }
+
+                    if (createHandler('trap_preventExtensions')(fakeTarget)) {
+                        // update proto
+                        FReflect.setPrototypeOf(fakeTarget, createHandler('trap_getPrototypeOf')(fakeTarget))
+
+                        // update property
+                        var keys = createHandler('trap_ownKeys')(fakeTarget)
+                        var getOwnDesc = createHandler('trap_getOwnPropertyDescriptor')
+
+                        for (let i = 0; i < keys.length; i++) {
+                            const desc = getOwnDesc(fakeTarget, i)
+                            FReflect.defineProperty(fakeTarget, keys[i], desc)
+                        }
+
+                        FReflect.preventExtensions(fakeTarget)                        
+                    }
+                }
+
+                // @ts-ignore
                 const proxy = new Proxy(fakeTarget, {
-                    // TODO: custom resolve
-                    get: createHandler('trap_get'),
-                    // TODO: custom resolve
-                    set: createHandler('trap_set'),
+                    get (target, key, receiver) {
+                        if (FReflect.getOwnPropertyDescriptor(proxy, key)) {
+                            var res = anotherWorld.trap_get(
+                                wrapper,
+                                dropPrototypeRecursive(toWrapper(key, currentWorld)),
+                                dropPrototypeRecursive(toWrapper(receiver, currentWorld))
+                            )
+        
+                            if (res.success) {
+                                return unwrap(res.value)
+                            } else {
+                                throw unwrap(res.value)
+                            }
+                        } else {
+                            var desc = FResolveDesc(FReflect.getPrototypeOf(proxy), key)
+
+                            if (!desc) {
+                                return undefined
+                            }
+
+                            if ('value' in desc) {
+                                return desc.value
+                            } else if (desc.get) {
+                                return FReflect.apply(desc.get, receiver, [])
+                            } else {
+                                return undefined
+                            }
+                        }
+                    },
+                    set (target, key, value, receiver) {
+                        const desc = FResolveDesc(proxy, key)
+
+                        if (desc === undefined || 'value' in desc) {
+                            var res = anotherWorld.trap_set(
+                                wrapper,
+                                dropPrototypeRecursive(toWrapper(key, currentWorld)),
+                                dropPrototypeRecursive(toWrapper(value, currentWorld)),
+                                dropPrototypeRecursive(toWrapper(receiver, currentWorld))
+                            )
+        
+                            if (res.success) {
+                                return unwrap(res.value)
+                            } else {
+                                throw unwrap(res.value)
+                            }
+                        } else if (desc.set) {
+                            return Reflect.apply(desc.set, receiver, [value])
+                        } else {
+                            return false
+                        }
+                    },
                     // this need to be specially handled
                     getOwnPropertyDescriptor (target, key) {
                         var res = anotherWorld.trap_getOwnPropertyDescriptor(
@@ -212,11 +284,18 @@ namespace SES {
     
                         if (res.success) {
                             var unwrapped = unwrap(res.value)
+
+                            if (unwrapped === undefined) {
+                                return
+                            }
+
+                            // use [[get]] to access remote descriptor instead
                             if (!unwrapped.configurable) {
                                 // TODO: is doing this really safe?
                                 // browser don't like you to fake configurable
                                 FReflect.defineProperty(fakeTarget, key, unwrapped)
                             }
+
                             return unwrapped
                         } else {
                             throw unwrap(res.value)
@@ -226,7 +305,11 @@ namespace SES {
                     ownKeys: createHandler('trap_ownKeys'),
                     apply: createHandler('trap_apply'),
                     construct: createHandler('trap_construct'),
-                    getPrototypeOf: createHandler('trap_getPrototypeOf'),
+                    getPrototypeOf (...args) {
+                        const res = createHandler('trap_getPrototypeOf')(...args)
+                        Reflect.setPrototypeOf(fakeTarget, res)
+                        return res
+                    },
                     setPrototypeOf: createHandler('trap_setPrototypeOf'),
                     // this will crash if not handled correctly, so it also need to be specially handled
                     isExtensible (target) {
@@ -238,7 +321,7 @@ namespace SES {
                             var extensible = unwrap(res.value)
 
                             if (!extensible) {
-                                shared.FFreeze(fakeTarget)
+                                freezeFakeIfNecessary()
                             }
 
                             return extensible
@@ -247,7 +330,10 @@ namespace SES {
                         }
                     },
                     preventExtensions: createHandler('trap_preventExtensions'),
-                    has: createHandler('trap_has'),
+                    has (target, key) {
+                        const desc = FResolveDesc(proxy, key)
+                        return desc === undefined
+                    },
                     deleteProperty: createHandler('trap_deleteProperty'),
                 })
 
@@ -256,7 +342,8 @@ namespace SES {
     
                 return proxy
             }
-    
+
+
             function toWrapper (obj: any, world: World): ValueWrapper {
                 if (obj === null) {
                     return {
@@ -291,6 +378,19 @@ namespace SES {
                 }
             }
     
+            function toRecord (obj: any, world: World): ValueWrapper {
+                const keys = FReflect.ownKeys(obj)
+                const target: ValueWrapperRecord = FCreateEmpty({}) as any
+                target.type = 'record'
+                target.value = FCreateEmpty({})
+
+                for (let key of FBArrayToIterator(keys)) {
+                    target.value[key] = toWrapper(obj[key], world)
+                }
+
+                return target
+            }
+
             function unwrap (unsafeObj: ValueWrapper) {
                 switch (safeGetProp(unsafeObj, 'type')) {
                     case 'primitive':
@@ -304,13 +404,23 @@ namespace SES {
                     case 'function':
                     case 'object':
                         return unwrapToken(safeGetProp(unsafeObj, 'value') as any)
+                    case 'record': {
+                        const result = FCreateEmpty({})
+                        const value = safeGetProp(unsafeObj, 'value') as { [key: string]: ValueWrapper}
+
+                        for (let key of FBArrayToIterator(FReflect.ownKeys(value))) {
+                            result[key] = unwrap(value[key])
+                        }
+
+                        return result
+                    }
                     default:
                         throw new FError('bad wrapper')
                 }
             }
             
 
-            // this need to be initialized out side of service catch, so it can't throw yet another overflow
+            // this need to be initialized outside of service catch, so it can't throw yet another stack overflow
             const badPayload: ResponseFailed = dropPrototypeRecursive({
                 success: false,
                 value: {
@@ -352,6 +462,7 @@ namespace SES {
                             value: toWrapper(value, currentWorld)
                         })
                     } catch (err) {
+                        console.log(err)
                         // just don't touch any function because it may cause yet another stack overflow here
                         return badPayload
                     }
@@ -364,6 +475,7 @@ namespace SES {
                     try {
                         return unwrap(world.getRoot().value)
                     } catch (err) {
+                        console.log(err)
                         return badPayload
                     }
                 },
@@ -374,6 +486,7 @@ namespace SES {
                             value: toWrapper(root, currentWorld)
                         })
                     } catch (err) {
+                        console.log(err)
                         return badPayload
                     }
                 },
@@ -384,7 +497,34 @@ namespace SES {
                 // TODO: redo with custom resolve
                 trap_set: createHandler('set'),
     
-                trap_getOwnPropertyDescriptor: createHandler('getOwnPropertyDescriptor'),
+                // trap_getOwnPropertyDescriptor: createHandler('getOwnPropertyDescriptor'),
+                trap_getOwnPropertyDescriptor (tokenW: ValueWrapper, keyW: ValueWrapper) {
+                    try {
+                        const token = unwrap(tokenW)
+                        const key = unwrap(keyW)
+    
+                        let value: any
+                        let success: boolean
+                        let wrapped: any
+                        // start of zone that user mat throw error
+                        try {
+                            value = FReflect.getOwnPropertyDescriptor(token, key)
+                            success = true
+                        } catch (err) {
+                            success = false
+                            value = err
+                        }
+
+                        return dropPrototypeRecursive({
+                            success,
+                            value: success && typeof value === 'object' ? toRecord(value, currentWorld): toWrapper(value, currentWorld)
+                        })
+                    } catch (err) {
+                        console.log(err)
+                        // just don't touch any function because it may cause yet another stack overflow here
+                        return badPayload
+                    }
+                },
     
                 trap_ownKeys: createHandler('ownKeys'),
     

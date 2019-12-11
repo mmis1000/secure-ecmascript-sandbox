@@ -50,7 +50,7 @@ namespace SES {
         const FFreeze = Object.freeze
         const FIsFrozen = Object.isFrozen
 
-        const SymbolIterator = Symbol.iterator
+        const SymbolIterator: (typeof Symbol)['iterator'] = Symbol.iterator
 
         const FBArrayToIterator = (arr: any[]) => {
             let index = 0
@@ -69,15 +69,40 @@ namespace SES {
                     return result
                 }
             }
-            const value = {
+            const value: {
+                next: typeof next,
+                [Symbol.iterator]: any
+            } = {
                 next,
                 [SymbolIterator]: function() { return this }
-            }
+            } as any
 
             return value
         }
 
         const FConsoleError = console.error
+
+        const FResolveDesc = (obj: any, key: string | number | symbol) => {
+            const weak = new FWeakMap()
+
+            let currentTarget = obj
+
+            while (currentTarget && !FBWeakMapHas(weak, currentTarget)) {
+                FBWeakMapSet(weak, currentTarget, true)
+
+                const desc = FReflect.getOwnPropertyDescriptor(currentTarget, key)
+
+                if (desc !== undefined) {
+                    FSetPrototypeOf(desc ,null)
+
+                    return desc
+                }
+
+                currentTarget = FGetPrototypeOf(currentTarget)
+            }
+
+            return undefined
+        }
 
         const shared = {
             FError,
@@ -98,7 +123,7 @@ namespace SES {
             FGetOwnPropertyDescriptor,
             FFreeze,
             FIsFrozen,
-
+            FResolveDesc,
             FConsoleError,
         }
 

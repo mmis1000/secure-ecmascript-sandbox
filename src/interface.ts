@@ -18,7 +18,14 @@ namespace SES {
         value: Token
     }
 
-    export type ValueWrapper = ValueWrapperPrimitive | ValueWrapperFunction | ValueWrapperObject
+    export interface ValueWrapperRecord {
+        type: 'record',
+        value: {
+            [key: string]: ValueWrapper
+        }
+    }
+
+    export type ValueWrapper = ValueWrapperPrimitive | ValueWrapperFunction | ValueWrapperObject | ValueWrapperRecord
 
     export interface ResponseFailed {
         success: false,
