@@ -62,4 +62,20 @@ namespace SES {
         trap_has(target: ValueWrapper, key: ValueWrapper): Response
         trap_deleteProperty(target: ValueWrapper, key: ValueWrapper): Response
     }
+
+    export interface ItoToken<T extends object>{
+        (obj: T, world: World, type: 'function' | 'object'): Token
+    }
+    export interface IunwrapToken{
+        (token: Token): any
+    }
+    export interface ItoWrapper {
+        (obj: any, world: World): ValueWrapper
+    }
+    export interface ItoRecord {
+        (obj: any, world: World): ValueWrapper
+    }
+    export interface Iunwrap {
+        (unsafeObj: ValueWrapper): any
+    }
 }

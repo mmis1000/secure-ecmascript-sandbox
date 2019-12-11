@@ -23,16 +23,7 @@
 
             window.document.title = 'testRealm'
 
-            var SES;
-            ;(function (SES) {
-                "use strict";
-                ${window.SES.init.toString()}
-                ${window.SES.makeShared.toString()}
-                SES.init = init
-                SES.makeShared = makeShared
-            }(SES || (SES = {})))
-
-            window.SES = SES
+            ${SES.createScript(SES)}
 
             const createRoot = window.SES.init()
             const server = createRoot(window)
@@ -47,9 +38,9 @@
         const remote = server.create(realm)
 
         // say good bye to the iframe, even ourself can't access the `real` sandbox object after this point
-        iframe.remove();
-        iframe = null
-        realm = null
+        // iframe.remove();
+        // iframe = null
+        // realm = null
 
         console.log(remote.document.title)
         remote.eval(`window.document.title = 'test2'`)

@@ -104,6 +104,75 @@ namespace SES {
             return undefined
         }
 
+        /**
+         * Clear all prototype prop from the whole object
+         */
+        const dropPrototypeRecursive = <T extends object>(unsafeObj: T, record = FReflect.construct(FWeakMap, [])) => {
+            if (FBWeakMapHas(record, unsafeObj)) {
+                return unsafeObj
+            }
+
+            if (unsafeObj != null && (typeof unsafeObj === 'function' || typeof unsafeObj === 'object')) {
+                FSetPrototypeOf(unsafeObj, null)
+
+                if (FGetPrototypeOf(unsafeObj) !== null) {
+                    throw new FError('PROTOTYPE LEAKING!!!')
+                }
+
+                FFreeze(unsafeObj)
+
+                if (!FIsFrozen) {
+                    throw new FError('tainted object!!!')
+                }
+
+                // the object may use timing attack to by pass get prototype check
+                // because it is not frozen at that time
+                if (FGetPrototypeOf(unsafeObj) !== null) {
+                    throw new FError('PROTOTYPE LEAKING!!!')
+                }
+
+                FBWeakMapSet(record, unsafeObj, true)
+
+                // burst it no matter it is enumerable or not
+                // nothing should ever leak
+                var keys = FReflect.ownKeys(/** @type {any} */(unsafeObj))
+
+                for (let i = 0; i < keys.length; i++) {
+                    dropPrototypeRecursive((unsafeObj as any)[keys[i]], record)
+                }
+            }
+
+            return unsafeObj
+        }
+
+        /**
+         * get prop without trigger the getter
+         * @param unsafeObj 
+         * @param name 
+         */
+        const safeGetProp = <T extends object, U extends keyof T>(unsafeObj: T, name: U): T[U] | null => {
+            if (unsafeObj == null || (typeof unsafeObj !== 'object' && typeof unsafeObj !== 'function')) {
+                return null
+            }
+
+            try {
+                const unsafeDesc = FGetOwnPropertyDescriptor(unsafeObj, name)
+                const valueDesc = FGetOwnPropertyDescriptor(unsafeDesc, 'value')
+
+                if (valueDesc == null) {
+                    throw "value desk does not exist"
+                }
+
+                return 'value' in valueDesc ? valueDesc.value :　null
+            } catch (err) {
+                FConsoleError('BAD ACTOR', unsafeObj, name)
+                throw 'This shouldn\'t happen'
+            }
+        }
+
+        // prevent arguments.caller
+        dropPrototypeRecursive(safeGetProp)
+
         const shared = {
             FError,
             FCall,
@@ -125,6 +194,8 @@ namespace SES {
             FIsFrozen,
             FResolveDesc,
             FConsoleError,
+            dropPrototypeRecursive,
+            safeGetProp,
         }
 
         FSetPrototypeOf(shared, null)
