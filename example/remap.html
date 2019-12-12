@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <script src="../lib/sandbox.js"></script>
+    <script>
+        const createRoot = window.SES.init((
+            registerMetaAttachCallback,
+            registerCustomTrap,
+            registerProxyInitCallback,
+            shared,
+            proxyToToken,
+            tokenToProxy,
+            realToToken,
+            tokenToReal,
+            unwrap,
+            toWrapper,
+            toRecord
+        ) => {
+            registerMetaAttachCallback(obj => {
+                if (obj === Array) {
+                    return {
+                        isArray: true
+                    }
+                } else {
+                    return {}
+                }
+            })
+        })
+        const server = createRoot(window)
+
+        let iframe = document.createElement('iframe')
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
+        iframe.style.display = 'none';
+
+        document.body.append(iframe)
+
+        let realm = iframe.contentWindow.eval(`
+            "use strict";
+
+            window.document.title = 'testRealm'
+
+            ${SES.createScript(SES)}
+
+            const createRoot = window.SES.init((
+                registerMetaAttachCallback,
+                registerCustomTrap,
+                registerProxyInitCallback,
+                shared,
+                proxyToToken,
+                tokenToProxy,
+                realToToken,
+                tokenToReal,
+                unwrap,
+                toWrapper,
+                toRecord
+            ) => {
+                registerProxyInitCallback(token => {
+                    if (token.meta.isArray) {
+                        console.log('triggered')
+                        return Array
+                    }
+                })
+            })
+            const server = createRoot(window)
+            server
+        `)
+
+        delete iframe.contentWindow.top
+        delete iframe.contentWindow.opener
+        delete iframe.contentWindow.parent
+
+
+        const remote = server.create(realm)
+
+        // say good bye to the iframe, even ourself can't access the `real` sandbox object after this point
+        iframe.remove();
+        iframe = null
+        realm = null
+        
+        remote.console = console
+        remote.main = window
+        remote.eval(`
+            console.log('running in remote: main.Array === Array is', main.Array === Array)
+        `)
+
+        console.log('running in local: Array === remote.Array', Array === remote.Array)
+    </script>
+</body>
+</html>

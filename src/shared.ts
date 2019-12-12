@@ -3,7 +3,7 @@ namespace SES {
         'use strict';
 
         // function/object that prefixed with F (which means the binding is frozen after the return)
-
+        const FProxy = Proxy
         const FError = Error
 
         const FCall = Function.prototype.call
@@ -11,6 +11,9 @@ namespace SES {
         const FBind = Function.prototype.bind
 
         const FMap = Map
+        const FMapHas = Map.prototype.has
+        const FMapSet = Map.prototype.set
+        const FMapGet = Map.prototype.get
 
         const FWeakMap = WeakMap
         const FWeakMapHas = WeakMap.prototype.has
@@ -20,6 +23,10 @@ namespace SES {
         const FBWeakMapHas = FCall.bind(FWeakMapHas)
         const FBWeakMapSet = FCall.bind(FWeakMapSet)
         const FBWeakMapGet = FCall.bind(FWeakMapGet)
+
+        const FBMapHas = FCall.bind(FMapHas)
+        const FBMapSet = FCall.bind(FMapSet)
+        const FBMapGet = FCall.bind(FMapGet)
 
         const FArrayMap = Array.prototype.map
         const FBArrayMap = FCall.bind(FArrayMap)
@@ -82,6 +89,11 @@ namespace SES {
 
         const FConsoleError = console.error
 
+        /**
+         * Using the getOwnPropertyDescriptor and FGetPrototypeOf
+         * @param obj any
+         * @param key object key
+         */
         const FResolveDesc = (obj: any, key: string | number | symbol) => {
             const weak = new FWeakMap()
 
@@ -170,15 +182,30 @@ namespace SES {
             }
         }
 
+        const FNodeNodeNameGetter = FReflect.getOwnPropertyDescriptor(Node.prototype, 'nodeName')!.get!
+
+        // Test whether given object is a dom node or not
+        const getNodeName = (obj: any) => {
+            try {
+                return FReflect.apply(FNodeNodeNameGetter, obj, [])
+            } catch (err) {
+                return null
+            }
+        }
+
         // prevent arguments.caller
         dropPrototypeRecursive(safeGetProp)
 
         const shared = {
+            FProxy,
             FError,
             FCall,
             FApply,
             FBind,
             FMap,
+            FBMapHas,
+            FBMapGet,
+            FBMapSet,
             FWeakMap,
             FBWeakMapHas,
             FBWeakMapSet,
@@ -196,6 +223,7 @@ namespace SES {
             FConsoleError,
             dropPrototypeRecursive,
             safeGetProp,
+            getNodeName
         }
 
         FSetPrototypeOf(shared, null)

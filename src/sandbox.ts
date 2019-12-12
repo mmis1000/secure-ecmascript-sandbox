@@ -1,6 +1,6 @@
 namespace SES {
     // this need to be run before any other script to get properly untainted global
-    export function init() {
+    export function init(configureCallback ?: SES.API.ConfigureCallback) {
         'use strict';
         // disable caller attack on the stack
 
@@ -15,6 +15,9 @@ namespace SES {
         const FBind = shared.FBind
 
         const FMap = shared.FMap
+        const FBMapSet = shared.FBMapSet
+        const FBMapGet = shared.FBMapGet
+        const FBMapHas = shared.FBMapHas
 
         const FWeakMap = shared.FWeakMap
 
@@ -51,6 +54,35 @@ namespace SES {
             // proxy in this world to token from external
             const proxyToToken = new FWeakMap<object, Token>()
 
+            // not freezing these until configure complete
+            const metaAttachCallBacks: API.IMetaAttach<any>[] = []
+            const proxyInitCallbacks: API.ICustomProxyInit[] = []
+            const customTraps: Record<string, API.ICustomTrap> = {}
+
+            FSetPrototypeOf(customTraps, null)
+
+            const registerMetaAttachCallback: API.RegisterMetaCallBack = (cb) => {
+                metaAttachCallBacks[metaAttachCallBacks.length] = cb
+            }
+            const registerProxyInitCallback: API.RegisterCustomProxyInit = (cb) => {
+                proxyInitCallbacks[proxyInitCallbacks.length] = cb
+            }
+            const registerCustomTrap: API.RegisterCustomTrap = (str, cb) => {
+                if (FReflect.getOwnPropertyDescriptor(customTraps, str)) {
+                    throw new FError(`trap ${str} already exists`)
+                }
+
+                customTraps[str] = (...args) => {
+                    try {
+                        // enforce safety policy
+                        const result = cb(...args)
+                        dropPrototypeRecursive(result)
+                        return result
+                    } catch (err) {
+                        return badPayload
+                    }
+                }
+            }
 
             /**
              * get a safe token that represent this object
@@ -69,6 +101,25 @@ namespace SES {
 
                 token.owner = world
                 token.type = type
+                let meta = {}
+
+                // hooks: attach metadata
+                if (metaAttachCallBacks.length > 0) {
+                    for (let i = 0; i < metaAttachCallBacks.length; i++) {
+                        let res
+                        try {
+                            res = metaAttachCallBacks[i](obj)
+                        } catch (err) {
+                            // mock the error
+                            debugger
+                            throw 'Token creation error'
+                        }
+                        meta = { ...meta, ...res }
+                    }
+                }
+                // hooks end: attach metadata
+
+                token.meta = meta
 
                 FBWeakMapSet(realToToken, obj, token)
                 FBWeakMapSet(tokenToReal, token, obj)
@@ -221,7 +272,6 @@ namespace SES {
                             value: toWrapper(value, currentWorld)
                         })
                     } catch (err) {
-                        console.log(err)
                         // just don't touch any function because it may cause yet another stack overflow here
                         return badPayload
                     }
@@ -234,7 +284,6 @@ namespace SES {
                     try {
                         return unwrap(world.getRoot().value)
                     } catch (err) {
-                        console.log(err)
                         return badPayload
                     }
                 },
@@ -245,9 +294,12 @@ namespace SES {
                             value: toWrapper(root, currentWorld)
                         })
                     } catch (err) {
-                        console.log(err)
                         return badPayload
                     }
+                },
+
+                getCustomTrap(name) {
+                    return customTraps[name]
                 },
 
                 // TODO: redo with custom resolve
@@ -264,7 +316,6 @@ namespace SES {
 
                         let value: any
                         let success: boolean
-                        let wrapped: any
                         // start of zone that user mat throw error
                         try {
                             value = FReflect.getOwnPropertyDescriptor(token, key)
@@ -279,13 +330,35 @@ namespace SES {
                             value: success && typeof value === 'object' ? toRecord(value, currentWorld) : toWrapper(value, currentWorld)
                         })
                     } catch (err) {
-                        console.log(err)
                         // just don't touch any function because it may cause yet another stack overflow here
                         return badPayload
                     }
                 },
 
-                trap_ownKeys: createHandler('ownKeys'),
+                trap_ownKeys (tokenW: ValueWrapper) {
+                    try {
+                        const token = unwrap(tokenW)
+
+                        let value: any
+                        let success: boolean
+                        // start of zone that user mat throw error
+                        try {
+                            value = FReflect.ownKeys(token)
+                            success = true
+                        } catch (err) {
+                            success = false
+                            value = err
+                        }
+
+                        return dropPrototypeRecursive({
+                            success,
+                            value: success ? toRecord(value, currentWorld) : toWrapper(value, currentWorld)
+                        })
+                    } catch (err) {
+                        // just don't touch any function because it may cause yet another stack overflow here
+                        return badPayload
+                    }
+                },
 
                 trap_apply: createHandler('apply'),
 
@@ -314,8 +387,29 @@ namespace SES {
                 toWrapper,
                 currentWorld,
                 proxyToToken,
-                tokenToProxy
+                tokenToProxy,
+                proxyInitCallbacks
             )
+
+            if (configureCallback != null) {
+                configureCallback(
+                    registerMetaAttachCallback,
+                    registerCustomTrap,
+                    registerProxyInitCallback,
+                    shared,
+                    proxyToToken,
+                    tokenToProxy,
+                    realToToken,
+                    tokenToReal,
+                    unwrap,
+                    toWrapper,
+                    toRecord
+                )
+            }
+
+            dropPrototypeRecursive(metaAttachCallBacks)
+            dropPrototypeRecursive(proxyInitCallbacks)
+            dropPrototypeRecursive(customTraps)
 
             return currentWorld
         }
