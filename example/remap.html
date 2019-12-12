@@ -86,6 +86,7 @@
         remote.main = window
         remote.eval(`
             console.log('running in remote: main.Array === Array is', main.Array === Array)
+            debugger
         `)
 
         console.log('running in local: Array === remote.Array is', Array === remote.Array)
