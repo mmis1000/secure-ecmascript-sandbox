@@ -62,7 +62,6 @@
             ) => {
                 registerProxyInitCallback(token => {
                     if (token.meta.isArray) {
-                        console.log('triggered')
                         return Array
                     }
                 })
