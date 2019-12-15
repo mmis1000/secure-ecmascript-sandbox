@@ -49,13 +49,11 @@
 
 # Warning
 
+## Edge
 Edge Current always leak buildins through Function.caller because all buildins are non strict function.  
 Makes it completely impossible to safely access untrustworthy object property descriptor
 
-Chrome(and maybe other) leak Function/Object through stack overflow. because chrome decide the prototype of `RangeError` by the `function being called` instead of the `caller`.  
-So leaking the `Token` to sandbox is never allowed currently or the sandbox will be completely pwned.
-
-## POC:
+### POC:
 
 ```js
 const foo = { bar: 1 }
@@ -74,12 +72,71 @@ const safeGetDescriptor = (baz) => {
 safeGetDescriptor(untrustworthyObject)
 ```
 
-## Result under Edge 44.18362.449.0
+### Result under Edge 44.18362.449.0
 
 ```txt
 caller be function getOwnPropertyDescriptor() { [native code] }
 ```
 
-## See also
+### See also
 
 https://github.com/Jack-Works/proposal-strict-built-in-functions
+
+## chrome (and maybe other)
+
+Chrome(and maybe other) leak Function/Object through stack overflow. because chrome decide the prototype of `RangeError` by the `function being called` instead of the `caller`.
+
+So leaking the `Token` to sandbox is never allowed currently or the sandbox will be completely pwned.
+
+May be also exploitable on firefox, but firefox randomized the stack size. So these kind of exploit can't be done reliable. (Will likely requires thousands of try, and each one only has 0.01% chance to exploit the problem successfully)
+
+### Poc
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        let iframe = document.createElement('iframe')
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
+        iframe.style.display = 'none';
+        document.body.append(iframe)
+        iframe.contentWindow.eval('window.foo = () => {}')
+        function getLimit (depth = 1) {
+            try {
+                return getLimit(depth + 1)
+            } catch (err) {
+                return depth
+            }
+        }
+        console.log(getLimit())
+        let err
+        function exhaust(depth, cb) {
+            try {
+                if (depth > 0) {
+                    exhaust(depth - 1, cb)
+                } else {
+                    cb()
+                }
+            } catch (_err) {
+                err =_err
+            }
+        }
+        exhaust(getLimit(), iframe.contentWindow.foo)
+        console.log(err instanceof RangeError, err instanceof iframe.contentWindow.RangeError)
+    </script>
+</body>
+</html>
+```
+
+### Result under Chrome 78.0.3904.108
+
+```txt
+false true
+```
