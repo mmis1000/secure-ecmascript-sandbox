@@ -1,5 +1,30 @@
 # Secure ECMAScript Sandbox experiment (not done yet)
 
+## Design
+
+### Don't expose data unnecessarily
+
+Instead of trying to wrap the data so attacker can't access the real data.  
+
+*WE SHUT THE DOOR DOWN DIRECTLY.*
+
+And trying to expose just **minimal** data that are **enough** to simulate all behavior we want in the iframe through a mini window.
+
+### Security should be enforced on the server side
+
+As everybody know, it is silly to enforce security on client side.
+
+The library copy installed inside the iframe must be only responsible to emulate object behavior properly instead of security things.
+
+Just don't ever try to send information that the iframe shouldn't know to the iframe,  
+and the iframe will never get it.
+
+### The current context hate you, and the iframe also hate you.
+
+Don't ever trust any object/function if it is not created by you or it does not have null prototype.
+
+Every object can be a big surprise when doing anything, because we now have something called `Proxy`.
+
 ## Terminology
 1. world  
     - Realm, Environment, whatever that mean the entire context running current script
