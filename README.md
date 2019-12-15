@@ -52,6 +52,9 @@
 Edge Current always leak buildins through Function.caller because all buildins are non strict function.  
 Makes it completely impossible to safely access untrustworthy object property descriptor
 
+Chrome(and maybe other) leak Function/Object through stack overflow. because chrome decide the prototype of `RangeError` by the `function being called` instead of the `caller`.  
+So leaking the `Token` to sandbox is never allowed currently or the sandbox will be completely pwned.
+
 ## POC:
 
 ```js
