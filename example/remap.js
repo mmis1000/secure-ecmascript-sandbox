@@ -4,22 +4,8 @@
 
 {
 
-const remote = window.SES.fastInit(window, (
-    registerMetaAttachCallback,
-    registerCustomTrap,
-    registerProxyInitCallback,
-    registerUnwrapCallback,
-    registerTrapHooks,
-    shared,
-    proxyToToken,
-    tokenToProxy,
-    realToToken,
-    tokenToReal,
-    unwrap,
-    toWrapper,
-    toRecord
-) => {
-    registerMetaAttachCallback(obj => {
+const remote = window.SES.fastInit(window, (ctx) => {
+    ctx.registerMetaCallback(obj => {
         if (obj === Array) {
             return {
                 isArray: true
@@ -32,22 +18,8 @@ const remote = window.SES.fastInit(window, (
             return {}
         }
     })
-}, (
-    registerMetaAttachCallback,
-    registerCustomTrap,
-    registerProxyInitCallback,
-    registerUnwrapCallback,
-    registerTrapHooks,
-    shared,
-    proxyToToken,
-    tokenToProxy,
-    realToToken,
-    tokenToReal,
-    unwrap,
-    toWrapper,
-    toRecord
-) => {
-    registerProxyInitCallback(token => {
+}, (ctx) => {
+    ctx.registerCustomProxyInit(token => {
         if (token.meta.isArray) {
             return Array
         } else if (token.meta.isRoot) {

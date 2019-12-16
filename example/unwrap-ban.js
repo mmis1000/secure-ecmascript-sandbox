@@ -4,22 +4,8 @@
 
 {
 
-const remote = window.SES.fastInit(window, (
-    registerMetaAttachCallback,
-    registerCustomTrap,
-    registerProxyInitCallback,
-    registerUnwrapCallback,
-    registerTrapHooks,
-    shared,
-    proxyToToken,
-    tokenToProxy,
-    realToToken,
-    tokenToReal,
-    unwrap,
-    toWrapper,
-    toRecord
-) => {
-    registerUnwrapCallback(obj => {
+const remote = window.SES.fastInit(window, (ctx) => {
+    ctx.registerUnwrapCallback(obj => {
         if (obj === fetch) {
             throw new Error('now allowed')
         }

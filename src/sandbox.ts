@@ -63,10 +63,10 @@ namespace SES {
 
             FSetPrototypeOf(customTraps, null)
 
-            const registerMetaAttachCallback: API.RegisterMetaCallback = (cb) => {
+            const registerMetaCallback: API.RegisterMetaCallback = (cb) => {
                 metaAttachCallBacks[metaAttachCallBacks.length] = cb
             }
-            const registerProxyInitCallback: API.RegisterCustomProxyInit = (cb) => {
+            const registerCustomProxyInit: API.RegisterCustomProxyInit = (cb) => {
                 proxyInitCallbacks[proxyInitCallbacks.length] = cb
             }
             const registerCustomTrap: API.RegisterCustomTrap = (str, cb) => {
@@ -427,10 +427,10 @@ namespace SES {
             )
 
             if (configureCallback != null) {
-                configureCallback(
-                    registerMetaAttachCallback,
+                configureCallback({
+                    registerMetaCallback,
                     registerCustomTrap,
-                    registerProxyInitCallback,
+                    registerCustomProxyInit,
                     registerUnwrapCallback,
                     registerTrapHooks,
                     shared,
@@ -441,8 +441,8 @@ namespace SES {
                     unwrap,
                     toWrapper,
                     toRecord,
-                    currentWorld
-                )
+                    world: currentWorld
+                })
             }
 
             dropPrototypeRecursive(metaAttachCallBacks)

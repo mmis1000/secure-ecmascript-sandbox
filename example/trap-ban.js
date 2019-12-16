@@ -4,28 +4,13 @@
 
 {
 
-const remote = window.SES.fastInit(window, (
-    registerMetaAttachCallback,
-    registerCustomTrap,
-    registerProxyInitCallback,
-    registerUnwrapCallback,
-    registerTrapHooks,
-    shared,
-    proxyToToken,
-    tokenToProxy,
-    realToToken,
-    tokenToReal,
-    unwrap,
-    toWrapper,
-    toRecord,
-    currentWorld
-) => {
-    registerTrapHooks({
+const remote = window.SES.fastInit(window, (ctx) => {
+    ctx.registerTrapHooks({
         apply (target, thisArg, argArray) {
-            if (unwrap(target) === fetch) {
+            if (ctx.unwrap(target) === fetch) {
                 return {
                     success: false,
-                    value: toWrapper(new Error('calling not allowed'), currentWorld)
+                    value: ctx.toWrapper(new Error('calling not allowed'), ctx.world)
                 }
             }
         }
