@@ -37,7 +37,7 @@ remote.eval(`
     try {
         fetch()
     } catch (err) {
-        console.error('call it will crash')
+        console.error('call it will crash', err)
     }
 `)
 
