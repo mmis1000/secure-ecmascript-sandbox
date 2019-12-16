@@ -448,6 +448,8 @@ namespace SES {
             dropPrototypeRecursive(metaAttachCallBacks)
             dropPrototypeRecursive(proxyInitCallbacks)
             dropPrototypeRecursive(customTraps)
+            dropPrototypeRecursive(unwrapCallBacks)
+            dropPrototypeRecursive(trapHooks)
 
             return currentWorld
         }
@@ -486,7 +488,7 @@ namespace SES {
     export function fastInit(root: any, configureCallback ?: SES.API.ConfigureCallback, remoteConfigureCallback ?: SES.API.ConfigureCallback) {
 
         const createRoot = SES.init(configureCallback)
-        const server = createRoot(window)
+        const server = createRoot(root)
 
         let iframe = document.createElement('iframe')
         iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');

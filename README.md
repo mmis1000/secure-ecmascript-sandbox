@@ -53,6 +53,9 @@ Every object can be a big surprise when doing anything, because we now have some
     - So you still can't get the real object even the service itself is pwned
     - `Even the service itself is untrustworthy`
 3. drop real ref toward another world ASAP before actual untrustworthy script running
+4. rules also applied to custom configuration in configure hooks
+    - It has exact the same privilege as service itself,  
+        the proxy also being completely pwned if the custom configurations are unsafe.
 
 ## Rules to stop world escape
 1. passing any object(include function) that has `__proto__` through the `service.[[method name]]` is not allowed
@@ -63,8 +66,8 @@ Every object can be a big surprise when doing anything, because we now have some
 ## Rules to prevent same world script break the service
 1. using any global variable inside the `init` function in not allowed
 2. using any prototype method/property is not allowed (includes the \[\[Symbol.iterator]])
-    - e.g. `[...array]`, `weakMap.set`
-3. any function that has `__proto__` must not be the left hand of property assignment
+    - e.g. `[...array]`, `weakMap.set`, `[].push('something')`
+3. any function/object that has `__proto__` must not be the left hand of property assignment
     - e.g. `({}).prop = 'whatever'`
     - It cause script run in same world able to add getter to the `Object.prototype` and break service
 
@@ -72,7 +75,7 @@ Every object can be a big surprise when doing anything, because we now have some
 
 ![The Architecture](./SES-arch.png)
 
-# Warning
+# Security Warning
 
 ## Edge
 Edge Current always leak buildins through Function.caller because all buildins are non strict function.  
