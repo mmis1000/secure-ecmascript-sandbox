@@ -44,25 +44,45 @@ namespace SES {
         meta: Record<string, any>
     }
 
+    type ProxyHandlers = Omit<Required<ProxyHandler<any>>, 'enumerate'>
+
+    type MapToValueWrapperList<T> = {
+        [K in keyof T]-?: ValueWrapper
+    }
+
+    type BeArray<T> = T extends any[] ? T : never
+
+    type Unshift<T extends any[], U> = ((arg: U, ...args: T) => void) extends ((...args: infer X) => void) ? X : never
+
+    type MapToHook<T extends { [key: string]: (...args: any[])=>any}> = {
+        [K in keyof T]: (...args: BeArray<MapToValueWrapperList<Parameters<T[K]>>>) => Response
+    }
+
+    type Traps = MapToHook<ProxyHandlers>
+
     export interface World {
         create(world: World): any
         getRoot(): Response
         getCustomTrap: API.getCustomTrap
 
-        trap_get(token: ValueWrapper, key: ValueWrapper, receiverToken: ValueWrapper): Response
-        trap_set(target: ValueWrapper, key: ValueWrapper, value: ValueWrapper, receiver: ValueWrapper): Response
-        trap_getOwnPropertyDescriptor(token: ValueWrapper, key: ValueWrapper): Response
-        trap_defineProperty(target: ValueWrapper, key: ValueWrapper, attributes: ValueWrapper): Response
-        trap_ownKeys(token: ValueWrapper): Response
-        trap_apply(target: ValueWrapper, thisArg: ValueWrapper, argArray: ValueWrapper): Response
-        trap_construct(target: ValueWrapper, argArray: ValueWrapper, newTarget: ValueWrapper): Response
-        trap_getPrototypeOf(target: ValueWrapper): Response
-        trap_setPrototypeOf(target: ValueWrapper, prototype: ValueWrapper): Response
+        trap_get: Traps['get']
+        trap_set: Traps['set']
+        trap_getOwnPropertyDescriptor: Traps['getOwnPropertyDescriptor']
+        trap_defineProperty: Traps['defineProperty']
+        trap_ownKeys: Traps['ownKeys']
+        trap_apply: Traps['apply']
+        trap_construct: Traps['construct']
+        trap_getPrototypeOf: Traps['getPrototypeOf']
+        trap_setPrototypeOf: Traps['setPrototypeOf']
 
-        trap_isExtensible(target: ValueWrapper): Response
-        trap_preventExtensions(target: ValueWrapper): Response
-        trap_has(target: ValueWrapper, key: ValueWrapper): Response
-        trap_deleteProperty(target: ValueWrapper, key: ValueWrapper): Response
+        trap_isExtensible: Traps['isExtensible']
+        trap_preventExtensions: Traps['preventExtensions']
+        trap_has: Traps['has']
+        trap_deleteProperty: Traps['deleteProperty']
+    }
+
+    export interface IInit {
+        (conf ?: API.ConfigureCallback): <T>(root: T) => World
     }
 
     export interface IToToken<T extends object> {
@@ -120,7 +140,26 @@ namespace SES {
             (token: Token, originalProxy: any, originalHandlers: ConstructorParameters<typeof Proxy>[1]): any
         }
 
-        export interface RegisterMetaCallBack {
+        /**
+         * Hooks allow host to deny using given real value by throwing error
+         *
+         * @side real
+         */
+        export interface UnwrapCallBack {
+            (realValue: any): void
+        }
+
+        /**
+         * Hooks allow host to replace certain hook response
+         *
+         * @side real
+         * @returns Any custom response or undefined to just do nothing
+         */
+        export type TrapHooks = {
+            [K in keyof Traps]+?: (...args: BeArray<Parameters<Traps[K]>>) => (Response | undefined)
+        }
+
+        export interface RegisterMetaCallback {
             (callback: IMetaAttach<any>): void
         }
 
@@ -132,15 +171,25 @@ namespace SES {
             (callback: ICustomProxyInit): void
         }
 
+        export interface RegisterUnwrapCallback {
+            (callback: UnwrapCallBack): void
+        }
+
+        export interface RegisterTrapHooks {
+            (callback: TrapHooks): void
+        }
+
         export interface getCustomTrap {
             (name: string): ICustomTrap
         }
 
         export interface ConfigureCallback {
             (
-                registerMetaCallBack: RegisterMetaCallBack,
+                registerMetaCallBack: RegisterMetaCallback,
                 registerCustomTrap: RegisterCustomTrap,
                 registerCustomProxyInit: RegisterCustomProxyInit,
+                registerUnwrapCallBack: RegisterUnwrapCallback,
+                registerTrapHooks: RegisterTrapHooks,
                 shared: ReturnType<typeof makeShared>,
                 proxyToToken: WeakMap<object, Token>,
                 tokenToProxy: WeakMap<Token, object>,
@@ -148,7 +197,8 @@ namespace SES {
                 tokenToReal: WeakMap<Token, any>,
                 unwrap: IUnwrap,
                 toWrapper: IToWrapper,
-                toRecord: IToRecord
+                toRecord: IToRecord,
+                world: World
             ): void
         }
     }

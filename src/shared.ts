@@ -1,4 +1,5 @@
 namespace SES {
+    export const DEV = true
     export function makeShared() {
         'use strict';
 

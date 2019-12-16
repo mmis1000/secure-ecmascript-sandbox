@@ -58,10 +58,12 @@ namespace SES {
             const metaAttachCallBacks: API.IMetaAttach<any>[] = []
             const proxyInitCallbacks: API.ICustomProxyInit[] = []
             const customTraps: Record<string, API.ICustomTrap> = {}
+            const unwrapCallBacks: API.UnwrapCallBack[] = []
+            const trapHooks: API.TrapHooks[] = []
 
             FSetPrototypeOf(customTraps, null)
 
-            const registerMetaAttachCallback: API.RegisterMetaCallBack = (cb) => {
+            const registerMetaAttachCallback: API.RegisterMetaCallback = (cb) => {
                 metaAttachCallBacks[metaAttachCallBacks.length] = cb
             }
             const registerProxyInitCallback: API.RegisterCustomProxyInit = (cb) => {
@@ -79,9 +81,16 @@ namespace SES {
                         dropPrototypeRecursive(result)
                         return result
                     } catch (err) {
+                        if (DEV) debugger
                         return badPayload
                     }
                 }
+            }
+            const registerUnwrapCallback: API.RegisterUnwrapCallback = (cb) => {
+                unwrapCallBacks[unwrapCallBacks.length] = cb
+            }
+            const registerTrapHooks: API.RegisterTrapHooks = (cb) => {
+                trapHooks[trapHooks.length] = cb
             }
 
             /**
@@ -129,7 +138,11 @@ namespace SES {
 
             function unwrapToken(token: Token): any {
                 if (FBWeakMapHas(tokenToReal, token)) {
-                    return FBWeakMapGet(tokenToReal, token)
+                    const real = FBWeakMapGet(tokenToReal, token)
+                    for (let i = 0; i < unwrapCallBacks.length; i++) {
+                        unwrapCallBacks[i](real)
+                    }
+                    return real
                 }
 
                 if (FBWeakMapHas(tokenToProxy, token)) {
@@ -252,6 +265,16 @@ namespace SES {
                 >(key: T) {
                 return function (...args: V) {
                     try {
+                        for (let i = 0; i < trapHooks.length; i++) {
+                            if ((trapHooks[i] as any)[key]) {
+                                const fn = (trapHooks[i] as any)[key]
+                                const res = fn(...args)
+                                if (res != null) {
+                                    return dropPrototypeRecursive(res)
+                                }
+                            }
+                        }
+
                         const unwrapped = FBArrayMap(args, (i: ValueWrapper) => unwrap(i))
 
                         let value: any
@@ -273,6 +296,7 @@ namespace SES {
                         })
                     } catch (err) {
                         // just don't touch any function because it may cause yet another stack overflow here
+                        if (DEV) debugger
                         return badPayload
                     }
                 }
@@ -284,6 +308,7 @@ namespace SES {
                     try {
                         return unwrap(world.getRoot().value)
                     } catch (err) {
+                        if (DEV) debugger
                         return badPayload
                     }
                 },
@@ -294,12 +319,20 @@ namespace SES {
                             value: toWrapper(root, currentWorld)
                         })
                     } catch (err) {
+                        if (DEV) debugger
                         return badPayload
                     }
                 },
 
-                getCustomTrap(name) {
-                    return customTraps[name]
+                getCustomTrap (name) {
+                    return (...args) => {
+                        try {
+                            return Reflect.apply(customTraps[name], null, args)
+                        } catch (err) {
+                            if (DEV) debugger
+                            throw 'bad response'
+                        }
+                    }
                 },
 
                 // TODO: redo with custom resolve
@@ -331,6 +364,7 @@ namespace SES {
                         })
                     } catch (err) {
                         // just don't touch any function because it may cause yet another stack overflow here
+                        if (DEV) debugger
                         return badPayload
                     }
                 },
@@ -356,6 +390,7 @@ namespace SES {
                         })
                     } catch (err) {
                         // just don't touch any function because it may cause yet another stack overflow here
+                        if (DEV) debugger
                         return badPayload
                     }
                 },
@@ -396,6 +431,8 @@ namespace SES {
                     registerMetaAttachCallback,
                     registerCustomTrap,
                     registerProxyInitCallback,
+                    registerUnwrapCallback,
+                    registerTrapHooks,
                     shared,
                     proxyToToken,
                     tokenToProxy,
@@ -403,7 +440,8 @@ namespace SES {
                     tokenToReal,
                     unwrap,
                     toWrapper,
-                    toRecord
+                    toRecord,
+                    currentWorld
                 )
             }
 
@@ -443,5 +481,36 @@ namespace SES {
         `
 
         return text
+    }
+
+    export function fastInit(root: any, configureCallback ?: SES.API.ConfigureCallback, remoteConfigureCallback ?: SES.API.ConfigureCallback) {
+
+        const createRoot = SES.init(configureCallback)
+        const server = createRoot(window)
+
+        let iframe = document.createElement('iframe')
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
+        iframe.style.display = 'none';
+
+        document.body.append(iframe)
+
+        let realm = (iframe.contentWindow as any).eval(`
+            "use strict";
+
+            ${SES.createScript(SES)}
+
+            const createRoot = window.SES.init(${remoteConfigureCallback ? remoteConfigureCallback.toString() : ''})
+            const server = createRoot(window)
+            server
+        `)
+
+        delete (iframe.contentWindow as any).opener
+
+        const remote = server.create(realm)
+
+        // say good bye to the iframe, even ourself can't access the `real` sandbox object after this point
+        iframe.remove()
+
+        return remote
     }
 }

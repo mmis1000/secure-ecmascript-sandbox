@@ -63,10 +63,15 @@ namespace SES {
 
             function createHandler<T extends keyof World>(key: T) {
                 return function handle(target: any, ...args: any[]) {
-                    var res = (anotherWorld![key] as any)(
-                        wrapper,
-                        ...(shared.FBArrayToIterator(FBArrayMap(args, (i: any) => dropPrototypeRecursive(toWrapper(i, currentWorld)))) as any)
-                    )
+                    try {
+                        var res = (anotherWorld![key] as any)(
+                            wrapper,
+                            ...(shared.FBArrayToIterator(FBArrayMap(args, (i: any) => dropPrototypeRecursive(toWrapper(i, currentWorld)))) as any)
+                        )
+                    } catch (err) {
+                        if (DEV) debugger
+                        throw 'potential unsafe overflow'
+                    }
 
                     if (res.success) {
                         return unwrap(res.value)
