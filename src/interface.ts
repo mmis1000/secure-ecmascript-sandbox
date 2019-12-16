@@ -106,9 +106,9 @@ namespace SES {
         /**
          * Hooks allow attaching data before token send to another world
          *
-         * This was called on the side that own the real object and
+         * This was called on the side that own the real object and  
          * called when any object type is converted to token.  
-         * Returned value will be merged onto the meta field of token
+         * Returned value will be merged onto the meta field of token.
          *
          * @side real
          * @returns A dict that contains literal or prototype-less value
@@ -118,7 +118,7 @@ namespace SES {
         }
 
         /**
-         * The custom trap used only for plugin communication
+         * The custom trap used only for plugin communication.
          *
          * @side real
          * @returns Any custom response
@@ -130,9 +130,9 @@ namespace SES {
         export type ConstructorParameters<T> = T extends { new (...args: infer U): any } ? U : never
 
         /**
-         * Hooks allow replacing the to proxy result if necessary
-         * The token => value relationship WILL be distorted after returning
-         * Using the proxy in side MAY cause problem due to half initialized state
+         * Hooks allow replacing the to proxy result if necessary.  
+         * The token => value relationship WILL be distorted after returning.  
+         * Using the proxy inside MAY cause problem due to half initialized state.
          * @side shadow
          * @returns Any custom response
          */
@@ -141,7 +141,7 @@ namespace SES {
         }
 
         /**
-         * Hooks allow host to deny using given real value by throwing error
+         * Hooks allow host to deny using given real value by throwing error.
          *
          * @side real
          */
@@ -150,7 +150,7 @@ namespace SES {
         }
 
         /**
-         * Hooks allow host to replace certain hook response
+         * Hooks allow host to replace certain hook response.
          *
          * @side real
          * @returns Any custom response or undefined to just do nothing
@@ -184,11 +184,11 @@ namespace SES {
         }
 
         export interface ConfigureCallback {
-            (
-                registerMetaCallBack: RegisterMetaCallback,
+            (context: {
+                registerMetaCallback: RegisterMetaCallback,
                 registerCustomTrap: RegisterCustomTrap,
                 registerCustomProxyInit: RegisterCustomProxyInit,
-                registerUnwrapCallBack: RegisterUnwrapCallback,
+                registerUnwrapCallback: RegisterUnwrapCallback,
                 registerTrapHooks: RegisterTrapHooks,
                 shared: ReturnType<typeof makeShared>,
                 proxyToToken: WeakMap<object, Token>,
@@ -199,7 +199,7 @@ namespace SES {
                 toWrapper: IToWrapper,
                 toRecord: IToRecord,
                 world: World
-            ): void
+            }): void
         }
     }
 }
