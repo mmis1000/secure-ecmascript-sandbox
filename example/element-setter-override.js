@@ -49,6 +49,11 @@
         const el = main.document.createElement('div')
         el.innerHTML = 'I am foo'
         main.document.body.append(el)
+
+        const innerHTMLSetter = Reflect.getOwnPropertyDescriptor(main.Element.prototype, 'innerHTML').set
+        const el2 = main.document.createElement('div')
+        Reflect.apply(innerHTMLSetter, el2, ['I am foo too'])
+        main.document.body.append(el2)
     `)
     
     }
