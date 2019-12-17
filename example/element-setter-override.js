@@ -47,7 +47,7 @@
     
     remote.eval(`
         const el = main.document.createElement('div')
-        el.innerHTML = 'foo'
+        el.innerHTML = 'I am foo'
         main.document.body.append(el)
     `)
     
