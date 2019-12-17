@@ -347,6 +347,16 @@ namespace SES {
                         const token = unwrap(tokenW)
                         const key = unwrap(keyW)
 
+                        for (let i = 0; i < trapHooks.length; i++) {
+                            const fn = trapHooks[i].getOwnPropertyDescriptor
+                            if (fn) {
+                                const res = fn(token, key)
+                                if (res != null) {
+                                    return dropPrototypeRecursive(res)
+                                }
+                            }
+                        }
+
                         let value: any
                         let success: boolean
                         // start of zone that user mat throw error
@@ -372,6 +382,16 @@ namespace SES {
                 trap_ownKeys (tokenW: ValueWrapper) {
                     try {
                         const token = unwrap(tokenW)
+
+                        for (let i = 0; i < trapHooks.length; i++) {
+                            const fn = trapHooks[i].ownKeys
+                            if (fn) {
+                                const res = fn(token)
+                                if (res != null) {
+                                    return dropPrototypeRecursive(res)
+                                }
+                            }
+                        }
 
                         let value: any
                         let success: boolean

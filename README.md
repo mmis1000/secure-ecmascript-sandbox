@@ -75,6 +75,36 @@ Every object can be a big surprise when doing anything, because we now have some
 
 ![The Architecture](./SES-arch.png)
 
+### Create shadow object
+
+R: sides that hold real object  
+S: sides that hold shadow object
+
+1. R - `toWrapper` call the `toToken`  to transform real object to token and wrap it into wrapper
+    1. R - `toToken` called `[Meta]` hooks to attach metadata onto the token
+    2. R - `toToken` recorded the real object <-> token relationship
+2. R -> S - The wrapper and token was transferred to the shadow side, and control was also hand over to the shadow side
+3. S - `unwrap` called `createProxy` to transform token into shadow object
+    1. S - `createProxy` created the shadow object
+    2. S - `createProxy` called `[CustomProxyInit]`
+        1. S - if `[customProxyInit]` do returning an object, return it to user instead of the original shadow object
+4. S - Service give shadow object to user code
+
+### Perform object operations on shadow object
+
+R: sides that hold real object  
+S: sides that hold shadow object
+
+1. S - Shadow object call the real side using `token.world.trap_XXXXXX` methods
+2. S -> R - The wrapper and token was transferred to the real side, and control was also hand over to the real side
+3. R - The service called `unwrap` to get the original object.  
+    Because object already exist in the map, it just take the real object back.
+    1. R - The `unwrap` called `[Unwrap]` hooks to decide whether it should deny using that object.
+4. R - The service called `[Trap]` hooks to decide if it should forge the response
+    1. R - If the hooks decide to forge the response, just return forged result instead
+5. R - The service perform operation on real object, return the response to shadow side
+    1. R - If the response is an object, use the shadow object creation process described above.
+
 # Security Warning
 
 ## Edge
