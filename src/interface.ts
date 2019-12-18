@@ -89,16 +89,19 @@ namespace SES {
     export interface IToToken<T extends object> {
         (obj: T, world: World, type: 'function' | 'object'): Token
     }
+
     export interface IUnwrapToken {
         (token: Token): Response<any, any>
     }
+
     export interface IToWrapper {
-        (obj: any, world: World): ValueWrapper
+        (obj: unknown, world: World): ValueWrapper
     }
+
     export interface IToRecord {
         (obj: any, world: World): ValueWrapper
     }
-    
+
     export interface IUnwrap {
         (unsafeObj: ValueWrapper): Response<any, any>
     }
