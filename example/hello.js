@@ -53,6 +53,35 @@ remote.eval(`
         get: getHandler
     })
 
+    function getLimit (depth = 1) {
+        try {
+            return getLimit(depth + 1)
+        } catch (err) {
+            return depth
+        }
+    }
+    console.log(getLimit())
+    let err
+    function exhaust(depth, cb) {
+        try {
+            if (depth > 0) {
+                exhaust(depth - 1, cb)
+            } else {
+                cb()
+            }
+        } catch (_err) {
+            err =_err
+        }
+    }
+    exhaust(getLimit(), main.fetch)
+    console.log(
+        err, 
+        err instanceof RangeError, 
+        typeof InternalError === 'undefined'
+            ? 'not support'
+            : err instanceof InternalError
+        )
+
     debugger
 `)
 
