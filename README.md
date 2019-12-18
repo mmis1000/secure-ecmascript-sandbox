@@ -1,5 +1,34 @@
 # Secure ECMAScript Sandbox experiment (not done yet)
 
+## Goal
+
+This library
+
+### DOES
+
+- Ensure the membrane does not break by user code that running side by side by accident or intentional
+- Ensure you can't leak identity between different context in hooks unless intentional
+  - see `example/hello.html`
+  - Object was forced to wrap/unwrap into correct state when go though membrane
+- Allow dev to remap identity between different context easily
+  - see `example/remap.html`
+- Allow dev to fake result of whatever proxy trap you want to another context easily
+  - see `example/unwrap-ban.html`, `example/element-setter-override.html`
+- Allow dev to stop another context from using given object that you don't like them to touch
+  - see `example/unwrap-ban.html`
+
+### DOES NOT
+
+- Remap all identity to trick sandboxed code into believing it is not in sandbox
+  - `myWindow.Array` still isn't `youWindow.Array`, we didn't do that by default
+  - It acts like an iframe on steroid
+  - You need to use function mentioned above to implement reference redirect yourself
+    - see `example/remap.html`
+- Stop the sandboxed code from using dangerous dom property
+  - e.g. `<script></script>`, `<img onerror="letsHackYou()">`, `new someObject.constructor.constructor('escaped code')`
+  - You need to use function mentioned above to implement it yourself
+    - see `example/element-setter-override.html`
+
 ## Design
 
 ### Don't expose data unnecessarily
