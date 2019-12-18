@@ -19,13 +19,14 @@ The library copy installed inside the iframe must be only responsible to emulate
 Just don't ever try to send information that the iframe shouldn't know to the iframe,  
 and the iframe will never get it.
 
-### The current context hate you, and the iframe also hate you.
+### The current context hate you, and the iframe also hate you
 
 Don't ever trust any object/function if it is not created by you or it does not have null prototype.
 
 Every object can be a big surprise when doing anything, because we now have something called `Proxy`.
 
 ## Terminology
+
 1. world  
     - Realm, Environment, whatever that mean the entire context running current script
     - e.g. iframe or new window
@@ -44,6 +45,7 @@ Every object can be a big surprise when doing anything, because we now have some
     - The fake object(proxy) that map to the real object in another world
 
 ## Principle
+
 1. shadow object includes service itself must be initiate in the same world
     - So it can't leak constructor and whatever
     - `Even the service itself is untrustworthy`
@@ -58,12 +60,14 @@ Every object can be a big surprise when doing anything, because we now have some
         the proxy also being completely pwned if the custom configurations are unsafe.
 
 ## Rules to stop world escape
+
 1. passing any object(include function) that has `__proto__` through the `service.[[method name]]` is not allowed
     - It will leak the `Object` thus `Function` thus allow escaping from another world to current world
 2. object that pass to other world must be frozen
     - Stop the redefine getter/setter attack
 
 ## Rules to prevent same world script break the service
+
 1. using any global variable inside the `init` function in not allowed
 2. using any prototype method/property is not allowed (includes the \[\[Symbol.iterator]])
     - e.g. `[...array]`, `weakMap.set`, `[].push('something')`
@@ -108,10 +112,11 @@ S: sides that hold shadow object
 # Security Warning
 
 ## Edge
+
 Edge Current always leak buildins through Function.caller because all buildins are non strict function.  
 Makes it completely impossible to safely access untrustworthy object property descriptor
 
-### POC:
+### POC
 
 ```js
 const foo = { bar: 1 }
