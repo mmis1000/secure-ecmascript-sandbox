@@ -90,8 +90,24 @@ namespace SES {
         (obj: T, world: World, type: 'function' | 'object'): Token
     }
 
+    /**
+     * This is a safe method, it will always success.
+     * User created error is bounded inside the response.
+     * 
+     * Any Error thrown need be considered as dangerous crash and eaten
+     */
     export interface IUnwrapToken {
         (token: Token): Response<any, any>
+    }
+
+    /**
+     * This is a safe method, it will always success.
+     * User created error is bounded inside the response.
+     * 
+     * Any Error thrown need be considered as dangerous crash and eaten
+     */
+    export interface IUnwrap {
+        (unsafeObj: ValueWrapper): Response<any, any>
     }
 
     export interface IToWrapper {
@@ -100,10 +116,6 @@ namespace SES {
 
     export interface IToRecord {
         (obj: any, world: World): ValueWrapper
-    }
-
-    export interface IUnwrap {
-        (unsafeObj: ValueWrapper): Response<any, any>
     }
 
     export namespace API {

@@ -4,7 +4,7 @@
 
 {
 
-const remote = window.SES.fastInit(window, (ctx) => {
+const remote = /** @type {any} */(window).remote = window.SES.fastInit(window, (ctx) => {
     ctx.registerTrapHooks({
         apply (target, thisArg, argArray) {
             if (ctx.unwrap(target).value === fetch) {

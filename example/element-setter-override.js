@@ -4,7 +4,7 @@
 
 {
 
-    const remote = window.SES.fastInit(window, (ctx) => {
+    const remote = /** @type {any} */(window).remote = window.SES.fastInit(window, (ctx) => {
         const innerHTMLSetter = ctx.shared.FReflect.getOwnPropertyDescriptor(Element.prototype, 'innerHTML').set
 
         ctx.registerTrapHooks({

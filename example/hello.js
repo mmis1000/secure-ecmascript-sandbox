@@ -3,7 +3,7 @@
 /// <reference path="../src/interface.ts" />
 {
 
-const remote = window.SES.fastInit(window)
+const remote = /** @type {any} */(window).remote = window.SES.fastInit(window)
 
 console.log(remote.document.title)
 remote.eval(`window.document.title = 'test2'`)

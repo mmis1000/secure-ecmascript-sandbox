@@ -4,7 +4,7 @@
 
 {
 
-const remote = window.SES.fastInit(window, (ctx) => {
+const remote = /** @type {any} */(window).remote = window.SES.fastInit(window, (ctx) => {
     ctx.registerUnwrapCallback(obj => {
         if (obj === fetch) {
             throw new Error('now allowed')
