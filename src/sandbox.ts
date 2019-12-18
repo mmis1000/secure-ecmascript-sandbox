@@ -465,7 +465,7 @@ namespace SES {
                         let success: boolean
                         // start of zone that user mat throw error
                         try {
-                            value = FReflect.ownKeys(token)
+                            value = FReflect.ownKeys(token.value)
                             success = true
                         } catch (err) {
                             // forward user error
