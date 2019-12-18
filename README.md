@@ -13,7 +13,7 @@ This library
 - Allow dev to remap identity between different context easily
   - see `example/remap.html`
 - Allow dev to fake result of whatever proxy trap you want to another context easily
-  - see `example/unwrap-ban.html`, `example/element-setter-override.html`
+  - see `example/trap-ban.html`, `example/element-setter-override.html`
 - Allow dev to stop another context from using given object that you don't like them to touch
   - see `example/unwrap-ban.html`
 
