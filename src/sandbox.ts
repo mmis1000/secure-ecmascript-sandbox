@@ -41,7 +41,14 @@ namespace SES {
         const safeGetProp = shared.safeGetProp
 
         return function createServer<T>(root: T) {
-
+            const successVal = <T>(v: T) => ({
+                success: true as const,
+                value: v
+            })
+            const failVal = <T>(v: T) => ({
+                success: false as const,
+                value: v
+            })
             // real object in this world to token
             const realToToken = new FWeakMap<object, Token>()
 
@@ -81,6 +88,7 @@ namespace SES {
                         dropPrototypeRecursive(result)
                         return result
                     } catch (err) {
+                        // this shouldn't happen
                         if (DEV) debugger
                         return badPayload
                     }
@@ -136,17 +144,31 @@ namespace SES {
                 return token
             }
 
-            function unwrapToken(token: Token): any {
+            function unwrapToken(token: Token): Response<any, any> {
                 if (FBWeakMapHas(tokenToReal, token)) {
                     const real = FBWeakMapGet(tokenToReal, token)
                     for (let i = 0; i < unwrapCallBacks.length; i++) {
-                        unwrapCallBacks[i](real)
+                        try {
+                            unwrapCallBacks[i](real)
+                        } catch (err) {
+                            // return it is allowed because user do allowed to do it
+                            return {
+                                success: false,
+                                value: err
+                            }
+                        }
                     }
-                    return real
+                    return {
+                        success: true,
+                        value: real
+                    }
                 }
 
                 if (FBWeakMapHas(tokenToProxy, token)) {
-                    return FBWeakMapGet(tokenToProxy, token)
+                    return {
+                        success: true,
+                        value: FBWeakMapGet(tokenToProxy, token)
+                    }
                 }
 
                 // to fake
@@ -154,16 +176,28 @@ namespace SES {
                 const world: World = FReflect.get(token, 'owner')
 
                 if (world === currentWorld) {
-                    throw new FError('Unexpected owner of current world')
+                    return {
+                        success: true,
+                        value: new FError('Unexpected owner of current world')
+                    }
                 }
 
                 switch (type) {
                     case 'function':
-                        return createProxy(token, 'function')
+                        return {
+                            success: true,
+                            value: createProxy(token, 'function')
+                        }
                     case 'object':
-                        return createProxy(token, 'object')
+                        return {
+                            success: true,
+                            value: createProxy(token, 'object')
+                        }
                     default:
-                        throw new FError('bad type')
+                        return {
+                            success: true,
+                            value: new FError('bad type')
+                        }
                 }
             }
 
@@ -214,37 +248,48 @@ namespace SES {
                 return target
             }
 
-            function unwrap(unsafeObj: ValueWrapper): any {
+            function unwrap(unsafeObj: ValueWrapper): Response<any, any> {
                 switch (safeGetProp(unsafeObj, 'type')) {
                     case 'primitive':
                         const value = safeGetProp(unsafeObj, 'value')
 
                         if (value != null && (typeof value === 'function' || typeof value === 'object')) {
-                            throw new FError('bad')
+                            return failVal(new FError('bad'))
                         }
 
-                        return value
+                        return successVal(value)
                     case 'function':
-                    case 'object':
-                        return unwrapToken(safeGetProp(unsafeObj, 'value') as any)
+                    case 'object': {
+                        const result = unwrapToken(safeGetProp(unsafeObj, 'value') as any)
+                        if (result.success) {
+                            return successVal(result.value)
+                        } else {
+                            return failVal(result.value)
+                        }
+                    }
                     case 'record': {
                         const result = FCreateEmpty({})
                         const value = safeGetProp(unsafeObj, 'value') as { [key: string]: ValueWrapper }
 
                         for (let key of FBArrayToIterator(FReflect.ownKeys(value))) {
-                            result[key] = unwrap(value[key])
+                            const res = unwrap(value[key])
+                            if (res.success) {
+                                result[key] = res.value
+                            } else {
+                                return failVal(res.value)
+                            }
                         }
 
-                        return result
+                        return successVal(result)
                     }
                     default:
-                        throw new FError('bad wrapper')
+                        return failVal(new FError('bad wrapper'))
                 }
             }
 
 
             // this need to be initialized outside of service catch, so it can't throw yet another stack overflow
-            const badPayload: ResponseFailed = dropPrototypeRecursive({
+            const badPayload: ResponseFailed<ValueWrapper> = dropPrototypeRecursive({
                 success: false,
                 value: {
                     type: 'primitive',
@@ -275,7 +320,15 @@ namespace SES {
                             }
                         }
 
-                        const unwrapped = FBArrayMap(args, (i: ValueWrapper) => unwrap(i))
+                        const unwrappedRes: Response<any, any>[] = FBArrayMap(args, (i: ValueWrapper) => unwrap(i))
+
+                        for (let item of FBArrayToIterator(unwrappedRes)) {
+                            if (!item.success) {
+                                return failPayload(item)
+                            }
+                        }
+
+                        const unwrapped = FBArrayMap(unwrappedRes, (i: Response<any, any>) => i.value)
 
                         let value: any
                         let success: boolean
@@ -285,6 +338,7 @@ namespace SES {
                             value = FReflect.apply(FReflect[key], null, unwrapped)
                             success = true
                         } catch (err) {
+                            // return this is okay
                             success = false
                             value = err
                         }
@@ -302,14 +356,30 @@ namespace SES {
                 }
             }
 
+            const failPayload = <T>(arg: ResponseFailed<T>): ResponseFailed<ValueWrapper> => {
+                var wrapped = toWrapper(arg.value, currentWorld)
+                return {
+                    success: false,
+                    value: wrapped
+                }
+            }
+
             // These shouldn't leak refs
             const currentWorld: World = {
                 create(world: World) {
+                    let res
                     try {
-                        return unwrap(world.getRoot().value)
+                        res = unwrap(world.getRoot().value)
                     } catch (err) {
+                        // this shouldn't happen
                         if (DEV) debugger
-                        return badPayload
+                        throw new Error('failed create')
+                    }
+
+                    if (res.success) {
+                        return res.value
+                    } else {
+                        throw res.value
                     }
                 },
                 getRoot() {
@@ -319,20 +389,13 @@ namespace SES {
                             value: toWrapper(root, currentWorld)
                         })
                     } catch (err) {
+                        // this simply shouldn't happen, so we ate it
                         if (DEV) debugger
                         return badPayload
                     }
                 },
-
                 getCustomTrap (name) {
-                    return (...args) => {
-                        try {
-                            return Reflect.apply(customTraps[name], null, args)
-                        } catch (err) {
-                            if (DEV) debugger
-                            throw 'bad response'
-                        }
-                    }
+                    return customTraps[name]
                 },
 
                 // TODO: redo with custom resolve
@@ -344,26 +407,30 @@ namespace SES {
                 // trap_getOwnPropertyDescriptor: createHandler('getOwnPropertyDescriptor'),
                 trap_getOwnPropertyDescriptor(tokenW: ValueWrapper, keyW: ValueWrapper) {
                     try {
-                        const token = unwrap(tokenW)
-                        const key = unwrap(keyW)
-
                         for (let i = 0; i < trapHooks.length; i++) {
                             const fn = trapHooks[i].getOwnPropertyDescriptor
                             if (fn) {
-                                const res = fn(token, key)
+                                const res = fn(tokenW, keyW)
                                 if (res != null) {
                                     return dropPrototypeRecursive(res)
                                 }
                             }
                         }
 
+                        const tokenT = unwrap(tokenW)
+                        const keyT = unwrap(keyW)
+
+                        if (!tokenT.success) return failPayload(tokenT)
+                        if (!keyT.success) return failPayload(keyT)
+
                         let value: any
                         let success: boolean
                         // start of zone that user mat throw error
                         try {
-                            value = FReflect.getOwnPropertyDescriptor(token, key)
+                            value = FReflect.getOwnPropertyDescriptor(tokenT.value, keyT.value)
                             success = true
                         } catch (err) {
+                            // forward user error
                             success = false
                             value = err
                         }
@@ -381,17 +448,18 @@ namespace SES {
 
                 trap_ownKeys (tokenW: ValueWrapper) {
                     try {
-                        const token = unwrap(tokenW)
-
                         for (let i = 0; i < trapHooks.length; i++) {
                             const fn = trapHooks[i].ownKeys
                             if (fn) {
-                                const res = fn(token)
+                                const res = fn(tokenW)
                                 if (res != null) {
                                     return dropPrototypeRecursive(res)
                                 }
                             }
                         }
+
+                        const token = unwrap(tokenW)
+                        if (!token.success) return failPayload(token)
 
                         let value: any
                         let success: boolean
@@ -400,6 +468,7 @@ namespace SES {
                             value = FReflect.ownKeys(token)
                             success = true
                         } catch (err) {
+                            // forward user error
                             success = false
                             value = err
                         }
@@ -531,7 +600,7 @@ namespace SES {
         const remote = server.create(realm)
 
         // say good bye to the iframe, even ourself can't access the `real` sandbox object after this point
-        iframe.remove()
+        // iframe.remove()
 
         return remote
     }

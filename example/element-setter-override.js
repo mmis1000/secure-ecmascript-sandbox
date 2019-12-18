@@ -10,7 +10,7 @@
         ctx.registerTrapHooks({
             set (target, key, value, receiver) {
                 if (
-                    ctx.shared.getNodeName(ctx.unwrap(receiver)) !== null
+                    ctx.shared.getNodeName(ctx.unwrap(receiver).value) !== null
                 ) {
                     return {
                         success: false,
@@ -19,9 +19,9 @@
                 }
             },
             apply (target, thisArg, argArray) {
-                if (ctx.unwrap(target) === innerHTMLSetter) {
-                    const htmlStr = String(ctx.unwrap(argArray)[0])
-                    const thisUnwrapped = ctx.unwrap(thisArg)
+                if (ctx.unwrap(target).value === innerHTMLSetter) {
+                    const htmlStr = String(ctx.unwrap(argArray).value[0])
+                    const thisUnwrapped = ctx.unwrap(thisArg).value
 
                     let res
                     let success

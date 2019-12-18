@@ -27,16 +27,17 @@ namespace SES {
 
     export type ValueWrapper = ValueWrapperPrimitive | ValueWrapperFunction | ValueWrapperObject | ValueWrapperRecord
 
-    export interface ResponseFailed {
+    export interface ResponseSuccess<T> {
+        success: true,
+        value: T
+    }
+
+    export interface ResponseFailed<T> {
         success: false,
-        value: ValueWrapper
-
+        value: T
     }
 
-    export interface Response {
-        success: boolean,
-        value: ValueWrapper
-    }
+    export type Response<T, U> = ResponseSuccess<T> | ResponseFailed<U>
 
     export interface Token {
         owner: World,
@@ -55,14 +56,14 @@ namespace SES {
     type Unshift<T extends any[], U> = ((arg: U, ...args: T) => void) extends ((...args: infer X) => void) ? X : never
 
     type MapToHook<T extends { [key: string]: (...args: any[])=>any}> = {
-        [K in keyof T]: (...args: BeArray<MapToValueWrapperList<Parameters<T[K]>>>) => Response
+        [K in keyof T]: (...args: BeArray<MapToValueWrapperList<Parameters<T[K]>>>) => Response<ValueWrapper, ValueWrapper>
     }
 
     type Traps = MapToHook<ProxyHandlers>
 
     export interface World {
         create(world: World): any
-        getRoot(): Response
+        getRoot(): Response<ValueWrapper, ValueWrapper>
         getCustomTrap: API.getCustomTrap
 
         trap_get: Traps['get']
@@ -89,7 +90,7 @@ namespace SES {
         (obj: T, world: World, type: 'function' | 'object'): Token
     }
     export interface IUnwrapToken {
-        (token: Token): any
+        (token: Token): Response<any, any>
     }
     export interface IToWrapper {
         (obj: any, world: World): ValueWrapper
@@ -99,7 +100,7 @@ namespace SES {
     }
     
     export interface IUnwrap {
-        (unsafeObj: ValueWrapper): any
+        (unsafeObj: ValueWrapper): Response<any, any>
     }
 
     export namespace API {
@@ -124,7 +125,7 @@ namespace SES {
          * @returns Any custom response
          */
         export interface ICustomTrap {
-            (...args: ValueWrapper[]): Response
+            (...args: ValueWrapper[]): Response<ValueWrapper, ValueWrapper>
         }
 
         export type ConstructorParameters<T> = T extends { new (...args: infer U): any } ? U : never
@@ -137,7 +138,7 @@ namespace SES {
          * @returns Any custom response
          */
         export interface ICustomProxyInit {
-            (token: Token, originalProxy: any, originalHandlers: ConstructorParameters<typeof Proxy>[1]): any
+            (token: Token, originalProxy: any, originalHandlers: ProxyHandlers): any
         }
 
         /**
@@ -156,7 +157,7 @@ namespace SES {
          * @returns Any custom response or undefined to just do nothing
          */
         export type TrapHooks = {
-            [K in keyof Traps]+?: (...args: BeArray<Parameters<Traps[K]>>) => (Response | undefined)
+            [K in keyof Traps]+?: (...args: BeArray<Parameters<Traps[K]>>) => (Response<ValueWrapper, ValueWrapper> | undefined)
         }
 
         export interface RegisterMetaCallback {

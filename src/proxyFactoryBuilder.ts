@@ -9,6 +9,15 @@ namespace SES {
         proxyInitCallbacks: API.ICustomProxyInit[]
     ) {
         'use strict';
+
+        const successVal = <T>(v: T) => ({
+            success: true as const,
+            value: v
+        })
+        const failVal = <T>(v: T) => ({
+            success: false as const,
+            value: v
+        })
         // disable caller attack on the stack
 
         // Must not use any global object
@@ -73,10 +82,15 @@ namespace SES {
                         throw 'potential unsafe overflow'
                     }
 
-                    if (res.success) {
-                        return unwrap(res.value)
+                    let success = res.success
+                    let result = unwrap(res.value)
+
+                    success = success && result.success
+
+                    if (success) {
+                        return result.value
                     } else {
-                        throw unwrap(res.value)
+                        throw result.value
                     }
                 }
             }

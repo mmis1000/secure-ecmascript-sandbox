@@ -22,19 +22,19 @@ remote.eval(`
     try {
         fetch()
     } catch (err) {
-        console.error('call it will crash')
+        console.error('call it will crash', err)
     }
 
     try {
         fetch.a
     } catch (err) {
-        console.error('access property on it will crash')
+        console.error('access property on it will crash', err)
     }
 
     try {
         main.fetch2 = fetch
     } catch (err) {
-        console.error('assign it on main window will crash')
+        console.error('assign it on main window will crash', err)
     }
 `)
 

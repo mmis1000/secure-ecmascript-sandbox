@@ -7,7 +7,7 @@
 const remote = window.SES.fastInit(window, (ctx) => {
     ctx.registerTrapHooks({
         apply (target, thisArg, argArray) {
-            if (ctx.unwrap(target) === fetch) {
+            if (ctx.unwrap(target).value === fetch) {
                 return {
                     success: false,
                     value: ctx.toWrapper(new Error('calling not allowed'), ctx.world)
