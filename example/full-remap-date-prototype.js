@@ -102,11 +102,12 @@
         console.log("and it behaves like we did", mainLandDate.hacked)
         console.log("and lets do it really bad  by nuke the prototype")
 
-        mainLandDate.__proto__ == null
+        mainLandDate.__proto__ = null
 
         debugger
     `)
 
+    console.log('prototype still exist', mainLandDate.toISOString())
     console.log('modified prototype do not exist outside of sandbox', /** @type {any} */(mainLandDate).hello)
-    console.log('And it is actually not hacked', /** @type {any} */(mainLandDate).hacked)
+    console.log('And object itself is actually not edited', /** @type {any} */(mainLandDate).hacked)
 }
