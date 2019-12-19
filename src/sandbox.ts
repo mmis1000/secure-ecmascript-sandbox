@@ -599,8 +599,12 @@ namespace SES {
 
         const remote = server.create(realm)
 
-        // say good bye to the iframe, even ourself can't access the `real` sandbox object after this point
-        // iframe.remove()
+        if (DEV) {
+            console.error('iframe is not detached in DEV mode')
+        } else {
+            // say good bye to the iframe, even ourself can't access the `real` sandbox object after this point
+            iframe.remove()
+        }
 
         return remote
     }
