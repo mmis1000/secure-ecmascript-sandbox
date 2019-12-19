@@ -134,8 +134,7 @@ namespace SES {
                 construct: createHandler('trap_construct')
             }
 
-            // @ts-ignore
-            const proxy = new FProxy(fakeTarget, {
+            const preMappedHandlers: Omit<Required<ProxyHandler<any>>, 'enumerate'> = {
                 ...defaultHandlers,
                 get(target, key, receiver) {
                     if (defaultHandlers.getOwnPropertyDescriptor(target, key)) {
@@ -203,13 +202,16 @@ namespace SES {
                 has(target, key) {
                     const desc = FResolveDesc(proxy, key)
                     return desc === undefined
-                },
-            })
+                }
+            }
+
+            // @ts-ignore
+            const proxy = new FProxy(fakeTarget, preMappedHandlers)
 
             let res
 
             for (let i = 0; i < proxyInitCallbacks.length; i++) {
-                res = proxyInitCallbacks[i](token, proxy, defaultHandlers)
+                res = proxyInitCallbacks[i](token, proxy, defaultHandlers, preMappedHandlers)
 
                 if (res != null) {
                     break

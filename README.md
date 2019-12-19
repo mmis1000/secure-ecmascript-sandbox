@@ -16,6 +16,8 @@ This library
   - see `example/trap-ban.html`, `example/element-setter-override.html`
 - Allow dev to stop another context from using given object that you don't like them to touch
   - see `example/unwrap-ban.html`
+- Mixed example, Allow you to fake literally everything against some object
+  - see `full-remap-date-prototype`
 
 ### DOES NOT
 

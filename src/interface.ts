@@ -153,7 +153,7 @@ namespace SES {
          * @returns Any custom response
          */
         export interface ICustomProxyInit {
-            (token: Token, originalProxy: any, originalHandlers: ProxyHandlers): any
+            (token: Token, originalProxy: any, originalHandlers: ProxyHandlers, preMappedHandlers: ProxyHandlers): any
         }
 
         /**
