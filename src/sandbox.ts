@@ -8,6 +8,8 @@ namespace SES {
         // And using only the frozen object returns from makeShared
         const shared = makeShared()
 
+        shared.dropPrototypeRecursive(SES as any)
+
         const FError = shared.FError
 
         const FCall = shared.FCall
@@ -555,7 +557,16 @@ namespace SES {
 
         for (let key of keys) {
             text += `
-                const ${key} = ${obj[key].toString()}
+                const ${key} = ${Reflect.apply(
+                    typeof obj[key] === 'function'
+                        ? Function.prototype.toString
+                        : typeof obj[key] === 'boolean'
+                            ? Boolean.prototype.toString
+                            : Object.prototype.toString
+                    , 
+                    obj[key], 
+                    []
+                )}
             `
         }
 
