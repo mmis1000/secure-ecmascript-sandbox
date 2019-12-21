@@ -1,9 +1,9 @@
 // @ts-check
-/// <reference path="../src/sandbox.ts" />
-/// <reference path="../src/interface.ts" />
-{
 
-const remote = /** @type {any} */(window).remote = window.SES.fastInit(window)
+import SES from '../lib/sandbox.js'
+
+
+const remote = /** @type {any} */(window).remote = SES.fastInit(window)
 
 console.log(remote.document.title)
 remote.eval(`window.document.title = 'test2'`)
@@ -96,6 +96,4 @@ try {
 } catch (err) {
     // this will be proxy
     console.log(err)
-}
-
 }

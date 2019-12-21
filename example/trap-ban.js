@@ -1,10 +1,8 @@
 // @ts-check
-/// <reference path="../src/sandbox.ts" />
-/// <reference path="../src/interface.ts" />
 
-{
+import SES from '../lib/sandbox.js'
 
-const remote = /** @type {any} */(window).remote = window.SES.fastInit(window, (ctx) => {
+const remote = /** @type {any} */(window).remote = SES.fastInit(window, (ctx) => {
     ctx.registerTrapHooks({
         apply (target, thisArg, argArray) {
             if (ctx.unwrap(target).value === fetch) {
@@ -40,5 +38,3 @@ remote.eval(`
         console.error('call it will crash', err)
     }
 `)
-
-}

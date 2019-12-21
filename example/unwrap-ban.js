@@ -1,10 +1,8 @@
 // @ts-check
-/// <reference path="../src/sandbox.ts" />
-/// <reference path="../src/interface.ts" />
 
-{
+import SES from '../lib/sandbox.js'
 
-const remote = /** @type {any} */(window).remote = window.SES.fastInit(window, (ctx) => {
+const remote = /** @type {any} */(window).remote = SES.fastInit(window, (ctx) => {
     ctx.registerUnwrapCallback(obj => {
         if (obj === fetch) {
             throw new Error('now allowed')
@@ -37,5 +35,3 @@ remote.eval(`
         console.error('assign it on main window will crash', err)
     }
 `)
-
-}
