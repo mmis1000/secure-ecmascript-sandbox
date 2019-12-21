@@ -1,221 +1,223 @@
-namespace SES {
-    interface CommandGetRoot {
-        type: "GetRoot"
+import {
+    IShared
+} from './sharedFactory.js'
+
+interface CommandGetRoot {
+    type: "GetRoot"
+}
+
+export type Command = CommandGetRoot
+
+interface ValueWrapperPrimitive {
+    type: 'primitive',
+    value: undefined | null | string | number | bigint | boolean | symbol
+}
+interface ValueWrapperFunction {
+    type: 'function',
+    value: Token
+}
+interface ValueWrapperObject {
+    type: 'object',
+    value: Token
+}
+
+export interface ValueWrapperRecord {
+    type: 'record',
+    value: {
+        [key: string]: ValueWrapper
     }
+}
 
-    export type Command = CommandGetRoot
+export type ValueWrapper = ValueWrapperPrimitive | ValueWrapperFunction | ValueWrapperObject | ValueWrapperRecord
 
-    interface ValueWrapperPrimitive {
-        type: 'primitive',
-        value: undefined | null | string | number | bigint | boolean | symbol
-    }
-    interface ValueWrapperFunction {
-        type: 'function',
-        value: Token
-    }
-    interface ValueWrapperObject {
-        type: 'object',
-        value: Token
-    }
+export interface ResponseSuccess<T> {
+    success: true,
+    value: T
+}
 
-    export interface ValueWrapperRecord {
-        type: 'record',
-        value: {
-            [key: string]: ValueWrapper
-        }
-    }
+export interface ResponseFailed<T> {
+    success: false,
+    value: T
+}
 
-    export type ValueWrapper = ValueWrapperPrimitive | ValueWrapperFunction | ValueWrapperObject | ValueWrapperRecord
+export type Response<T, U> = ResponseSuccess<T> | ResponseFailed<U>
 
-    export interface ResponseSuccess<T> {
-        success: true,
-        value: T
-    }
+export interface Token {
+    owner: World,
+    type: 'function' | 'object',
+    meta: Record<string, any>
+}
 
-    export interface ResponseFailed<T> {
-        success: false,
-        value: T
-    }
+type ProxyHandlers = Omit<Required<ProxyHandler<any>>, 'enumerate'>
 
-    export type Response<T, U> = ResponseSuccess<T> | ResponseFailed<U>
+type MapToValueWrapperList<T> = {
+    [K in keyof T]-?: ValueWrapper
+}
 
-    export interface Token {
-        owner: World,
-        type: 'function' | 'object',
-        meta: Record<string, any>
-    }
+type BeArray<T> = T extends any[] ? T : never
 
-    type ProxyHandlers = Omit<Required<ProxyHandler<any>>, 'enumerate'>
+type Unshift<T extends any[], U> = ((arg: U, ...args: T) => void) extends ((...args: infer X) => void) ? X : never
 
-    type MapToValueWrapperList<T> = {
-        [K in keyof T]-?: ValueWrapper
-    }
+type MapToHook<T extends { [key: string]: (...args: any[])=>any}> = {
+    [K in keyof T]: (...args: BeArray<MapToValueWrapperList<Parameters<T[K]>>>) => Response<ValueWrapper, ValueWrapper>
+}
 
-    type BeArray<T> = T extends any[] ? T : never
+type Traps = MapToHook<ProxyHandlers>
 
-    type Unshift<T extends any[], U> = ((arg: U, ...args: T) => void) extends ((...args: infer X) => void) ? X : never
+export interface World {
+    create(world: World): any
+    getRoot(): Response<ValueWrapper, ValueWrapper>
+    getCustomTrap: API.getCustomTrap
 
-    type MapToHook<T extends { [key: string]: (...args: any[])=>any}> = {
-        [K in keyof T]: (...args: BeArray<MapToValueWrapperList<Parameters<T[K]>>>) => Response<ValueWrapper, ValueWrapper>
-    }
+    trap_get: Traps['get']
+    trap_set: Traps['set']
+    trap_getOwnPropertyDescriptor: Traps['getOwnPropertyDescriptor']
+    trap_defineProperty: Traps['defineProperty']
+    trap_ownKeys: Traps['ownKeys']
+    trap_apply: Traps['apply']
+    trap_construct: Traps['construct']
+    trap_getPrototypeOf: Traps['getPrototypeOf']
+    trap_setPrototypeOf: Traps['setPrototypeOf']
 
-    type Traps = MapToHook<ProxyHandlers>
+    trap_isExtensible: Traps['isExtensible']
+    trap_preventExtensions: Traps['preventExtensions']
+    trap_has: Traps['has']
+    trap_deleteProperty: Traps['deleteProperty']
+}
 
-    export interface World {
-        create(world: World): any
-        getRoot(): Response<ValueWrapper, ValueWrapper>
-        getCustomTrap: API.getCustomTrap
+export interface IInit {
+    (conf ?: API.ConfigureCallback): <T>(root: T) => World
+}
 
-        trap_get: Traps['get']
-        trap_set: Traps['set']
-        trap_getOwnPropertyDescriptor: Traps['getOwnPropertyDescriptor']
-        trap_defineProperty: Traps['defineProperty']
-        trap_ownKeys: Traps['ownKeys']
-        trap_apply: Traps['apply']
-        trap_construct: Traps['construct']
-        trap_getPrototypeOf: Traps['getPrototypeOf']
-        trap_setPrototypeOf: Traps['setPrototypeOf']
+export interface IToToken<T extends object> {
+    (obj: T, world: World, type: 'function' | 'object'): Token
+}
 
-        trap_isExtensible: Traps['isExtensible']
-        trap_preventExtensions: Traps['preventExtensions']
-        trap_has: Traps['has']
-        trap_deleteProperty: Traps['deleteProperty']
-    }
+/**
+ * This is a safe method, it will always success.
+ * User created error is bounded inside the response.
+ * 
+ * Any Error thrown need be considered as dangerous crash and eaten
+ */
+export interface IUnwrapToken {
+    (token: Token): Response<any, any>
+}
 
-    export interface IInit {
-        (conf ?: API.ConfigureCallback): <T>(root: T) => World
-    }
+/**
+ * This is a safe method, it will always success.
+ * User created error is bounded inside the response.
+ * 
+ * Any Error thrown need be considered as dangerous crash and eaten
+ */
+export interface IUnwrap {
+    (unsafeObj: ValueWrapper): Response<any, any>
+}
 
-    export interface IToToken<T extends object> {
-        (obj: T, world: World, type: 'function' | 'object'): Token
+export interface IToWrapper {
+    (obj: unknown, world: World): ValueWrapper
+}
+
+export interface IToRecord {
+    (obj: any, world: World): ValueWrapper
+}
+
+export namespace API {
+    /**
+     * Hooks allow attaching data before token send to another world
+     *
+     * This was called on the side that own the real object and  
+     * called when any object type is converted to token.  
+     * Returned value will be merged onto the meta field of token.
+     *
+     * @side real
+     * @returns A dict that contains literal or prototype-less value
+     */
+    export interface IMetaAttach<T extends object> {
+        (obj: any): T
     }
 
     /**
-     * This is a safe method, it will always success.
-     * User created error is bounded inside the response.
-     * 
-     * Any Error thrown need be considered as dangerous crash and eaten
+     * The custom trap used only for plugin communication.
+     *
+     * @side real
+     * @returns Any custom response
      */
-    export interface IUnwrapToken {
-        (token: Token): Response<any, any>
+    export interface ICustomTrap {
+        (...args: ValueWrapper[]): Response<ValueWrapper, ValueWrapper>
+    }
+
+    export type ConstructorParameters<T> = T extends { new (...args: infer U): any } ? U : never
+
+    /**
+     * Hooks allow replacing the to proxy result if necessary.  
+     * The token => value relationship WILL be distorted after returning.  
+     * Using the proxy inside MAY cause problem due to half initialized state.
+     * @side shadow
+     * @returns Any custom response
+     */
+    export interface ICustomProxyInit {
+        (token: Token, originalProxy: any, originalHandlers: ProxyHandlers, preMappedHandlers: ProxyHandlers): any
     }
 
     /**
-     * This is a safe method, it will always success.
-     * User created error is bounded inside the response.
-     * 
-     * Any Error thrown need be considered as dangerous crash and eaten
+     * Hooks allow host to deny using given real value by throwing error.
+     *
+     * @side real
      */
-    export interface IUnwrap {
-        (unsafeObj: ValueWrapper): Response<any, any>
+    export interface UnwrapCallBack {
+        (realValue: any): void
     }
 
-    export interface IToWrapper {
-        (obj: unknown, world: World): ValueWrapper
+    /**
+     * Hooks allow host to replace certain hook response.
+     *
+     * @side real
+     * @returns Any custom response or undefined to just do nothing
+     */
+    export type TrapHooks = {
+        [K in keyof Traps]+?: (...args: BeArray<Parameters<Traps[K]>>) => (Response<ValueWrapper, ValueWrapper> | undefined)
     }
 
-    export interface IToRecord {
-        (obj: any, world: World): ValueWrapper
+    export interface RegisterMetaCallback {
+        (callback: IMetaAttach<any>): void
     }
 
-    export namespace API {
-        /**
-         * Hooks allow attaching data before token send to another world
-         *
-         * This was called on the side that own the real object and  
-         * called when any object type is converted to token.  
-         * Returned value will be merged onto the meta field of token.
-         *
-         * @side real
-         * @returns A dict that contains literal or prototype-less value
-         */
-        export interface IMetaAttach<T extends object> {
-            (obj: any): T
-        }
+    export interface RegisterCustomTrap {
+        (trapName: string, callback: ICustomTrap): void
+    }
 
-        /**
-         * The custom trap used only for plugin communication.
-         *
-         * @side real
-         * @returns Any custom response
-         */
-        export interface ICustomTrap {
-            (...args: ValueWrapper[]): Response<ValueWrapper, ValueWrapper>
-        }
+    export interface RegisterCustomProxyInit {
+        (callback: ICustomProxyInit): void
+    }
 
-        export type ConstructorParameters<T> = T extends { new (...args: infer U): any } ? U : never
+    export interface RegisterUnwrapCallback {
+        (callback: UnwrapCallBack): void
+    }
 
-        /**
-         * Hooks allow replacing the to proxy result if necessary.  
-         * The token => value relationship WILL be distorted after returning.  
-         * Using the proxy inside MAY cause problem due to half initialized state.
-         * @side shadow
-         * @returns Any custom response
-         */
-        export interface ICustomProxyInit {
-            (token: Token, originalProxy: any, originalHandlers: ProxyHandlers, preMappedHandlers: ProxyHandlers): any
-        }
+    export interface RegisterTrapHooks {
+        (callback: TrapHooks): void
+    }
 
-        /**
-         * Hooks allow host to deny using given real value by throwing error.
-         *
-         * @side real
-         */
-        export interface UnwrapCallBack {
-            (realValue: any): void
-        }
+    export interface getCustomTrap {
+        (name: string): ICustomTrap
+    }
 
-        /**
-         * Hooks allow host to replace certain hook response.
-         *
-         * @side real
-         * @returns Any custom response or undefined to just do nothing
-         */
-        export type TrapHooks = {
-            [K in keyof Traps]+?: (...args: BeArray<Parameters<Traps[K]>>) => (Response<ValueWrapper, ValueWrapper> | undefined)
-        }
-
-        export interface RegisterMetaCallback {
-            (callback: IMetaAttach<any>): void
-        }
-
-        export interface RegisterCustomTrap {
-            (trapName: string, callback: ICustomTrap): void
-        }
-
-        export interface RegisterCustomProxyInit {
-            (callback: ICustomProxyInit): void
-        }
-
-        export interface RegisterUnwrapCallback {
-            (callback: UnwrapCallBack): void
-        }
-
-        export interface RegisterTrapHooks {
-            (callback: TrapHooks): void
-        }
-
-        export interface getCustomTrap {
-            (name: string): ICustomTrap
-        }
-
-        export interface ConfigureCallback {
-            (context: {
-                registerMetaCallback: RegisterMetaCallback,
-                registerCustomTrap: RegisterCustomTrap,
-                registerCustomProxyInit: RegisterCustomProxyInit,
-                registerUnwrapCallback: RegisterUnwrapCallback,
-                registerTrapHooks: RegisterTrapHooks,
-                shared: ReturnType<typeof makeShared>,
-                proxyToToken: WeakMap<object, Token>,
-                tokenToProxy: WeakMap<Token, object>,
-                realToToken: WeakMap<any, Token>,
-                tokenToReal: WeakMap<Token, any>,
-                unwrap: IUnwrap,
-                toWrapper: IToWrapper,
-                toRecord: IToRecord,
-                world: World
-            }): void
-        }
+    export interface ConfigureCallback {
+        (context: {
+            registerMetaCallback: RegisterMetaCallback,
+            registerCustomTrap: RegisterCustomTrap,
+            registerCustomProxyInit: RegisterCustomProxyInit,
+            registerUnwrapCallback: RegisterUnwrapCallback,
+            registerTrapHooks: RegisterTrapHooks,
+            shared: IShared,
+            proxyToToken: WeakMap<object, Token>,
+            tokenToProxy: WeakMap<Token, object>,
+            realToToken: WeakMap<any, Token>,
+            tokenToReal: WeakMap<Token, any>,
+            unwrap: IUnwrap,
+            toWrapper: IToWrapper,
+            toRecord: IToRecord,
+            world: World
+        }): void
     }
 }

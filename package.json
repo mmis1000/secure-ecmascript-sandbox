@@ -6,8 +6,13 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "npx -p typescript tsc -w",
+    "dev-cjs": "npx -p typescript tsc -w -p tsconfig-cjs.json",
     "serve": "npx serve -p 9000"
   },
   "author": "",
-  "license": "ISC"
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^12.12.21",
+    "typescript": "^3.7.4"
+  }
 }

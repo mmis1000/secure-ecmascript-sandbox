@@ -105,3 +105,4 @@ dist
 
 # exlcude the dist
 lib/
+lib-cjs/

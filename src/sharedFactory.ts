@@ -1,237 +1,247 @@
-namespace SES {
-    export const DEV = true
-    export function makeShared() {
-        'use strict';
+export let DEV = true
 
-        // function/object that prefixed with F (which means the binding is frozen after the return)
-        const FProxy = Proxy
-        const FError = Error
+const SES = {
+    get DEV () {
+        return DEV
+    },
 
-        const FCall = Function.prototype.call
-        const FApply = Function.prototype.apply
-        const FBind = Function.prototype.bind
+    set DEV (value) {
+        DEV = value
+    }
+}
+export function makeShared() {
+    'use strict';
 
-        const FMap = Map
-        const FMapHas = Map.prototype.has
-        const FMapSet = Map.prototype.set
-        const FMapGet = Map.prototype.get
+    // function/object that prefixed with F (which means the binding is frozen after the return)
+    const FProxy = Proxy
+    const FError = Error
 
-        const FWeakMap = WeakMap
-        const FWeakMapHas = WeakMap.prototype.has
-        const FWeakMapSet = WeakMap.prototype.set
-        const FWeakMapGet = WeakMap.prototype.get
+    const FCall = Function.prototype.call
+    const FApply = Function.prototype.apply
+    const FBind = Function.prototype.bind
 
-        const FBWeakMapHas = FCall.bind(FWeakMapHas)
-        const FBWeakMapSet = FCall.bind(FWeakMapSet)
-        const FBWeakMapGet = FCall.bind(FWeakMapGet)
+    const FMap = Map
+    const FMapHas = Map.prototype.has
+    const FMapSet = Map.prototype.set
+    const FMapGet = Map.prototype.get
 
-        const FBMapHas = FCall.bind(FMapHas)
-        const FBMapSet = FCall.bind(FMapSet)
-        const FBMapGet = FCall.bind(FMapGet)
+    const FWeakMap = WeakMap
+    const FWeakMapHas = WeakMap.prototype.has
+    const FWeakMapSet = WeakMap.prototype.set
+    const FWeakMapGet = WeakMap.prototype.get
 
-        const FArrayMap = Array.prototype.map
-        const FBArrayMap = FCall.bind(FArrayMap)
+    const FBWeakMapHas = FCall.bind(FWeakMapHas)
+    const FBWeakMapSet = FCall.bind(FWeakMapSet)
+    const FBWeakMapGet = FCall.bind(FWeakMapGet)
 
-        const FReflect: typeof Reflect = {
-            // ...Reflect,
-            construct: Reflect.construct,
-            ownKeys: Reflect.ownKeys,
-            get: Reflect.get,
-            set: Reflect.set,
-            getOwnPropertyDescriptor: Reflect.getOwnPropertyDescriptor,
-            apply: Reflect.apply,
-            getPrototypeOf: Reflect.getPrototypeOf,
-            defineProperty: Reflect.defineProperty,
-            setPrototypeOf: Reflect.setPrototypeOf,
-            isExtensible: Reflect.isExtensible,
-            preventExtensions: Reflect.preventExtensions,
-            has: Reflect.has,
-            deleteProperty: Reflect.deleteProperty,
-            enumerate: Reflect.enumerate
+    const FBMapHas = FCall.bind(FMapHas)
+    const FBMapSet = FCall.bind(FMapSet)
+    const FBMapGet = FCall.bind(FMapGet)
+
+    const FArrayMap = Array.prototype.map
+    const FBArrayMap = FCall.bind(FArrayMap)
+
+    const FReflect: typeof Reflect = {
+        // ...Reflect,
+        construct: Reflect.construct,
+        ownKeys: Reflect.ownKeys,
+        get: Reflect.get,
+        set: Reflect.set,
+        getOwnPropertyDescriptor: Reflect.getOwnPropertyDescriptor,
+        apply: Reflect.apply,
+        getPrototypeOf: Reflect.getPrototypeOf,
+        defineProperty: Reflect.defineProperty,
+        setPrototypeOf: Reflect.setPrototypeOf,
+        isExtensible: Reflect.isExtensible,
+        preventExtensions: Reflect.preventExtensions,
+        has: Reflect.has,
+        deleteProperty: Reflect.deleteProperty,
+        enumerate: Reflect.enumerate
+    }
+    const FCreateEmpty = Object.create.bind(Object, null)
+    const FSetPrototypeOf = Object.setPrototypeOf
+    const FGetPrototypeOf = Object.getPrototypeOf
+
+    const FGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor
+
+    const FFreeze = Object.freeze
+    const FIsFrozen = Object.isFrozen
+
+    const SymbolIterator: (typeof Symbol)['iterator'] = Symbol.iterator
+
+    const FBArrayToIterator = (arr: any[]) => {
+        let index = 0
+        const next = () => {
+            if (index >= arr.length) {
+                return {
+                    value: undefined,
+                    done: true
+                }
+            } else {
+                const result = {
+                    value: arr[index],
+                    done: false
+                }
+                index++
+                return result
+            }
         }
-        const FCreateEmpty = Object.create.bind(Object, null)
-        const FSetPrototypeOf = Object.setPrototypeOf
-        const FGetPrototypeOf = Object.getPrototypeOf
+        const value: {
+            next: typeof next,
+            [Symbol.iterator]: any
+        } = {
+            next,
+            [SymbolIterator]: function () { return this }
+        } as any
 
-        const FGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor
+        return value
+    }
 
-        const FFreeze = Object.freeze
-        const FIsFrozen = Object.isFrozen
+    const FConsoleError = console.error
 
-        const SymbolIterator: (typeof Symbol)['iterator'] = Symbol.iterator
+    /**
+     * Using the getOwnPropertyDescriptor and FGetPrototypeOf
+     * @param obj any
+     * @param key object key
+     */
+    const FResolveDesc = (obj: any, key: string | number | symbol) => {
+        const weak = new FWeakMap()
 
-        const FBArrayToIterator = (arr: any[]) => {
-            let index = 0
-            const next = () => {
-                if (index >= arr.length) {
-                    return {
-                        value: undefined,
-                        done: true
-                    }
-                } else {
-                    const result = {
-                        value: arr[index],
-                        done: false
-                    }
-                    index++
-                    return result
-                }
+        let currentTarget = obj
+
+        while (currentTarget && !FBWeakMapHas(weak, currentTarget)) {
+            FBWeakMapSet(weak, currentTarget, true)
+
+            const desc = FReflect.getOwnPropertyDescriptor(currentTarget, key)
+
+            if (desc !== undefined) {
+                FSetPrototypeOf(desc, null)
+
+                return desc
             }
-            const value: {
-                next: typeof next,
-                [Symbol.iterator]: any
-            } = {
-                next,
-                [SymbolIterator]: function () { return this }
-            } as any
 
-            return value
+            currentTarget = FGetPrototypeOf(currentTarget)
         }
 
-        const FConsoleError = console.error
+        return undefined
+    }
 
-        /**
-         * Using the getOwnPropertyDescriptor and FGetPrototypeOf
-         * @param obj any
-         * @param key object key
-         */
-        const FResolveDesc = (obj: any, key: string | number | symbol) => {
-            const weak = new FWeakMap()
-
-            let currentTarget = obj
-
-            while (currentTarget && !FBWeakMapHas(weak, currentTarget)) {
-                FBWeakMapSet(weak, currentTarget, true)
-
-                const desc = FReflect.getOwnPropertyDescriptor(currentTarget, key)
-
-                if (desc !== undefined) {
-                    FSetPrototypeOf(desc, null)
-
-                    return desc
-                }
-
-                currentTarget = FGetPrototypeOf(currentTarget)
-            }
-
-            return undefined
-        }
-
-        /**
-         * Clear all prototype prop from the whole object
-         */
-        const dropPrototypeRecursive = <T extends object>(unsafeObj: T, record = FReflect.construct(FWeakMap, [])) => {
-            if (FBWeakMapHas(record, unsafeObj)) {
-                return unsafeObj
-            }
-
-            if (unsafeObj != null && (typeof unsafeObj === 'function' || typeof unsafeObj === 'object')) {
-                FSetPrototypeOf(unsafeObj, null)
-
-                if (FGetPrototypeOf(unsafeObj) !== null) {
-                    throw new FError('PROTOTYPE LEAKING!!!')
-                }
-
-                FFreeze(unsafeObj)
-
-                if (!FIsFrozen) {
-                    throw new FError('tainted object!!!')
-                }
-
-                // the object may use timing attack to by pass get prototype check
-                // because it is not frozen at that time
-                if (FGetPrototypeOf(unsafeObj) !== null) {
-                    throw new FError('PROTOTYPE LEAKING!!!')
-                }
-
-                FBWeakMapSet(record, unsafeObj, true)
-
-                // burst it no matter it is enumerable or not
-                // nothing should ever leak
-                var keys = FReflect.ownKeys(/** @type {any} */(unsafeObj))
-
-                for (let i = 0; i < keys.length; i++) {
-                    dropPrototypeRecursive((unsafeObj as any)[keys[i]], record)
-                }
-            }
-
+    /**
+     * Clear all prototype prop from the whole object
+     */
+    const dropPrototypeRecursive = <T extends object>(unsafeObj: T, record = FReflect.construct(FWeakMap, [])) => {
+        if (FBWeakMapHas(record, unsafeObj)) {
             return unsafeObj
         }
 
-        /**
-         * get prop without trigger the getter
-         * @param unsafeObj 
-         * @param name 
-         */
-        const safeGetProp = <T extends object, U extends keyof T>(unsafeObj: T, name: U): T[U] | null => {
-            if (unsafeObj == null || (typeof unsafeObj !== 'object' && typeof unsafeObj !== 'function')) {
-                return null
+        if (unsafeObj != null && (typeof unsafeObj === 'function' || typeof unsafeObj === 'object')) {
+            FSetPrototypeOf(unsafeObj, null)
+
+            if (FGetPrototypeOf(unsafeObj) !== null) {
+                throw new FError('PROTOTYPE LEAKING!!!')
             }
 
-            try {
-                const unsafeDesc = FGetOwnPropertyDescriptor(unsafeObj, name)
-                const valueDesc = FGetOwnPropertyDescriptor(unsafeDesc, 'value')
+            FFreeze(unsafeObj)
 
-                if (valueDesc == null) {
-                    throw "value desk does not exist"
-                }
-
-                return 'value' in valueDesc ? valueDesc.value : null
-            } catch (err) {
-                FConsoleError('BAD ACTOR', unsafeObj, name)
-                throw 'This shouldn\'t happen'
+            if (!FIsFrozen) {
+                throw new FError('tainted object!!!')
             }
-        }
 
-        const FNodeNodeNameGetter = FReflect.getOwnPropertyDescriptor(Node.prototype, 'nodeName')!.get!
+            // the object may use timing attack to by pass get prototype check
+            // because it is not frozen at that time
+            if (FGetPrototypeOf(unsafeObj) !== null) {
+                throw new FError('PROTOTYPE LEAKING!!!')
+            }
 
-        // Test whether given object is a dom node or not
-        const getNodeName = (obj: any) => {
-            try {
-                return FReflect.apply(FNodeNodeNameGetter, obj, [])
-            } catch (err) {
-                return null
+            FBWeakMapSet(record, unsafeObj, true)
+
+            // burst it no matter it is enumerable or not
+            // nothing should ever leak
+            var keys = FReflect.ownKeys(/** @type {any} */(unsafeObj))
+
+            for (let i = 0; i < keys.length; i++) {
+                dropPrototypeRecursive((unsafeObj as any)[keys[i]], record)
             }
         }
 
-        // prevent arguments.caller
-        dropPrototypeRecursive(safeGetProp)
-
-        const shared = {
-            FProxy,
-            FError,
-            FCall,
-            FApply,
-            FBind,
-            FMap,
-            FBMapHas,
-            FBMapGet,
-            FBMapSet,
-            FWeakMap,
-            FBWeakMapHas,
-            FBWeakMapSet,
-            FBWeakMapGet,
-            FBArrayMap,
-            FBArrayToIterator,
-            FReflect,
-            FCreateEmpty,
-            FSetPrototypeOf,
-            FGetPrototypeOf,
-            FGetOwnPropertyDescriptor,
-            FFreeze,
-            FIsFrozen,
-            FResolveDesc,
-            FConsoleError,
-            dropPrototypeRecursive,
-            safeGetProp,
-            getNodeName
-        }
-
-        FSetPrototypeOf(shared, null)
-        FFreeze(shared)
-
-        return shared
+        return unsafeObj
     }
 
-    export type IShared = ReturnType<typeof makeShared>
+    /**
+     * get prop without trigger the getter
+     * @param unsafeObj 
+     * @param name 
+     */
+    const safeGetProp = <T extends object, U extends keyof T>(unsafeObj: T, name: U): T[U] | null => {
+        if (unsafeObj == null || (typeof unsafeObj !== 'object' && typeof unsafeObj !== 'function')) {
+            return null
+        }
+
+        try {
+            const unsafeDesc = FGetOwnPropertyDescriptor(unsafeObj, name)
+            const valueDesc = FGetOwnPropertyDescriptor(unsafeDesc, 'value')
+
+            if (valueDesc == null) {
+                throw "value desk does not exist"
+            }
+
+            return 'value' in valueDesc ? valueDesc.value : null
+        } catch (err) {
+            FConsoleError('BAD ACTOR', unsafeObj, name)
+            throw 'This shouldn\'t happen'
+        }
+    }
+
+    const FNodeNodeNameGetter = typeof Node != 'undefined'
+        ? FReflect.getOwnPropertyDescriptor(Node.prototype, 'nodeName')!.get!
+        : () => {}
+
+    // Test whether given object is a dom node or not
+    const getNodeName = (obj: any) => {
+        try {
+            return FReflect.apply(FNodeNodeNameGetter, obj, [])
+        } catch (err) {
+            return null
+        }
+    }
+
+    // prevent arguments.caller
+    dropPrototypeRecursive(safeGetProp)
+
+    const shared = {
+        FProxy,
+        FError,
+        FCall,
+        FApply,
+        FBind,
+        FMap,
+        FBMapHas,
+        FBMapGet,
+        FBMapSet,
+        FWeakMap,
+        FBWeakMapHas,
+        FBWeakMapSet,
+        FBWeakMapGet,
+        FBArrayMap,
+        FBArrayToIterator,
+        FReflect,
+        FCreateEmpty,
+        FSetPrototypeOf,
+        FGetPrototypeOf,
+        FGetOwnPropertyDescriptor,
+        FFreeze,
+        FIsFrozen,
+        FResolveDesc,
+        FConsoleError,
+        dropPrototypeRecursive,
+        safeGetProp,
+        getNodeName
+    }
+
+    FSetPrototypeOf(shared, null)
+    FFreeze(shared)
+
+    return shared
 }
+
+export type IShared = ReturnType<typeof makeShared>
