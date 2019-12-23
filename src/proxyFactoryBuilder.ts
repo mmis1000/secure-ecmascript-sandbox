@@ -1,7 +1,7 @@
 import {
     IShared,
     DEV
-} from './sharedFactory.js'
+} from './sharedFactory'
 
 import {
     IUnwrap,
@@ -9,7 +9,7 @@ import {
     World,
     Token,
     API
-} from './interface.js'
+} from './interface'
 
 const SES = {
     get DEV () {

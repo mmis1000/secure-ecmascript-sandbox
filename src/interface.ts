@@ -1,6 +1,6 @@
 import {
     IShared
-} from './sharedFactory.js'
+} from './sharedFactory'
 
 interface CommandGetRoot {
     type: "GetRoot"

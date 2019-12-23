@@ -4,15 +4,21 @@
   "description": "",
   "main": "sandbox.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "npx -p typescript tsc -w",
-    "dev-cjs": "npx -p typescript tsc -w -p tsconfig-cjs.json",
+    "test": "jest",
+    "dev": "npx ttsc -w",
+    "dev-cjs": "npx ttsc -w -p tsconfig-cjs.json",
     "serve": "npx serve -p 9000"
   },
   "author": "",
   "license": "MIT",
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jest": "^24.0.24",
     "@types/node": "^12.12.21",
-    "typescript": "^3.7.4"
+    "typescript": "^3.7.4",
+    "@zoltu/typescript-transformer-append-js-extension": "^1.0.1",
+    "jest": "^24.9.0",
+    "ts-jest": "^24.2.0",
+    "ttypescript": "^1.5.8"
   }
 }

@@ -1,7 +1,7 @@
 import {
     makeShared,
     DEV
-} from './sharedFactory.js'
+} from './sharedFactory'
 
 import {
     Command,
@@ -17,7 +17,7 @@ import {
 
 import {
     createProxyFactory
-} from './proxyFactoryBuilder.js'
+} from './proxyFactoryBuilder'
 
 const SES = {
     makeShared,
