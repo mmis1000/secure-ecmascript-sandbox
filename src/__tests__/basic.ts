@@ -56,12 +56,25 @@ describe('basic', () => {
         }
     })
 
-    test('topology is preserved when passing through the membrane', () => {
+    test('topology is preserved when passing through the membrane although their identity are not equal', () => {
         remote.eval(`
             global.obj = {}
             global.obj.a = global.obj
         `)
 
         expect(remote.obj).toBe(remote.obj.a)
+        expect(sandboxGlobal.obj).toBe(sandboxGlobal.obj.a)
+        expect(remote.obj).not.toBe(sandboxGlobal.obj)
+    })
+
+    test('you should be able to retrieve original object from the proxied sandbox if you set on it', () => {
+        const obj2 = {}
+        remote.obj2 = obj2
+
+        expect(obj2).toBe(remote.obj2)
+
+        expect(sandboxGlobal.obj2).not.toBeUndefined()
+        expect(sandboxGlobal.obj2).not.toBe(obj2)
+
     })
 });
