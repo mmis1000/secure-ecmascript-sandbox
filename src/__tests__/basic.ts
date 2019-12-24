@@ -23,8 +23,13 @@ describe('basic', () => {
     const remote = server.create(realm)
     remote.global = remote
 
+
     test('the sandboxed version and the original sandbox global are not the same', () => {
         expect(remote).not.toBe(sandboxGlobal)
+    })
+
+    test('the sandboxed version and the original sandbox global has same keys', () => {
+        expect(Reflect.ownKeys(remote).length).toBe(Reflect.ownKeys(sandboxGlobal).length)
     })
 
     test('the sandboxed Error is instance of sandboxed Function', () => {
