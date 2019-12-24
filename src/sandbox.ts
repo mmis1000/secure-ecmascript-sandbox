@@ -9,6 +9,7 @@ import {
     Token,
     Response,
     ValueWrapperRecord,
+    ValueWrapperWellKnown,
     ValueWrapper,
     ResponseSuccess,
     ResponseFailed,
@@ -111,6 +112,8 @@ export function init(configureCallback ?: API.ConfigureCallback) {
         const customTraps: Record<string, API.ICustomTrap> = {}
         const unwrapCallBacks: API.UnwrapCallBack[] = []
         const trapHooks: API.TrapHooks[] = []
+        const wellKnownValues = new FMap<string | symbol, any>()
+        const wellKnownValuesReversed = new FMap<any, string | symbol>()
 
         FSetPrototypeOf(customTraps, null)
 
@@ -143,6 +146,10 @@ export function init(configureCallback ?: API.ConfigureCallback) {
         }
         const registerTrapHooks: API.RegisterTrapHooks = (cb) => {
             trapHooks[trapHooks.length] = cb
+        }
+        const registerWellKnownValue: API.RegisterWellKnownValue = (key, value) => {
+            FBMapSet(wellKnownValues, key, value)
+            FBMapSet(wellKnownValuesReversed, value, key)
         }
 
         /**
@@ -257,6 +264,14 @@ export function init(configureCallback ?: API.ConfigureCallback) {
         }
 
         function toWrapper(obj: any, world: World): ValueWrapper {
+            // skip all following process if the value is `well known`
+            if (FBMapHas(wellKnownValuesReversed, obj)) {
+                return {
+                    type: 'well-known',
+                    value: FBMapGet(wellKnownValuesReversed, obj)
+                }
+            }
+
             if (obj === null) {
                 return {
                     type: 'primitive',
@@ -337,11 +352,30 @@ export function init(configureCallback ?: API.ConfigureCallback) {
 
                     return successVal(result)
                 }
+
+                case 'well-known': {
+                    const value = safeGetProp(unsafeObj as ValueWrapperWellKnown, 'value')!
+                    const result = FBMapGet(wellKnownValues, value)
+
+                    for (let i = 0; i < unwrapCallBacks.length; i++) {
+                        try {
+                            unwrapCallBacks[i](result)
+                        } catch (err) {
+                            // return it is allowed because user do allowed to do it
+                            return {
+                                success: false,
+                                value: err
+                            }
+                        }
+                    }
+
+                    return successVal(result)
+                }
+
                 default:
                     return failVal(new FError('bad wrapper'))
             }
         }
-
 
         // this need to be initialized outside of service catch, so it can't throw yet another stack overflow
         const badPayload: ResponseFailed<ValueWrapper> = dropPrototypeRecursive({
@@ -397,6 +431,7 @@ export function init(configureCallback ?: API.ConfigureCallback) {
                         success = false
                         value = err
                     }
+
                     // end of zone
 
                     return dropPrototypeRecursive({
@@ -579,6 +614,7 @@ export function init(configureCallback ?: API.ConfigureCallback) {
                 registerCustomProxyInit,
                 registerUnwrapCallback,
                 registerTrapHooks,
+                registerWellKnownValue,
                 shared,
                 proxyToToken,
                 tokenToProxy,
@@ -678,12 +714,6 @@ export function createScript(obj: any) {
 export function fastInitNode(root: any, configureCallback ?: API.ConfigureCallback, remoteConfigureCallback ?: API.ConfigureCallback) {
     const createRoot = init(configureCallback)
     const server = createRoot(root)
-    
-
-    // if (/cov_[a-zA-Z0-9]+/.test(text)) {
-    //     console.log(text.match(/cov_[a-zA-Z0-9]+/)![0])
-    //     text = 'const ' + text.match(/cov_[a-zA-Z0-9]+/)![0] + ' = {};\n' + text
-    // }
 
     const rawRealGlobalExpr = `(0, eval)("'use strict'; this")`
 

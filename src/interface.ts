@@ -12,6 +12,14 @@ interface ValueWrapperPrimitive {
     type: 'primitive',
     value: undefined | null | string | number | bigint | boolean | symbol
 }
+/**
+ * Well known value that should exist in every js environment
+ * e.g. Array, ArrayPrototype, Date, DatePrototype...etc
+ */
+export interface ValueWrapperWellKnown {
+    type: 'well-known',
+    value: string | symbol
+}
 interface ValueWrapperFunction {
     type: 'function',
     value: Token
@@ -28,7 +36,7 @@ export interface ValueWrapperRecord {
     }
 }
 
-export type ValueWrapper = ValueWrapperPrimitive | ValueWrapperFunction | ValueWrapperObject | ValueWrapperRecord
+export type ValueWrapper = ValueWrapperPrimitive | ValueWrapperFunction | ValueWrapperObject | ValueWrapperRecord | ValueWrapperWellKnown
 
 export interface ResponseSuccess<T> {
     success: true,
@@ -198,6 +206,10 @@ export namespace API {
         (callback: TrapHooks): void
     }
 
+    export interface RegisterWellKnownValue {
+        (key: string | symbol, value: any): void
+    }
+
     export interface getCustomTrap {
         (name: string): ICustomTrap
     }
@@ -209,6 +221,7 @@ export namespace API {
             registerCustomProxyInit: RegisterCustomProxyInit,
             registerUnwrapCallback: RegisterUnwrapCallback,
             registerTrapHooks: RegisterTrapHooks,
+            registerWellKnownValue: RegisterWellKnownValue,
             shared: IShared,
             proxyToToken: WeakMap<object, Token>,
             tokenToProxy: WeakMap<Token, object>,

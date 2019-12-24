@@ -3,6 +3,7 @@ import SES from '../sandbox'
 describe('hooks', () => {
     describe('ban dereference', () => {
         let fail = false
+
         const secretFunction = () => {
             fail = true
         }
@@ -120,9 +121,10 @@ describe('hooks', () => {
     describe('remap reference (combine token meta and custom proxy init)', () => {
         const remote = SES.fastInitNode(null, (ctx) => {
             ctx.registerMetaCallback(obj => {
-                if (obj === Array) {
+                if (obj instanceof Date) {
                     return {
-                        isArray: true
+                        isDate: true,
+                        time: obj.getTime()
                     }
                 } else {
                     return {}
@@ -130,28 +132,47 @@ describe('hooks', () => {
             })
         }, (ctx) => {
             ctx.registerCustomProxyInit(token => {
-                if (token.meta.isArray) {
-                    return Array
+                if (token.meta.isDate) {
+                    return new Date(token.meta.time)
                 }
             })
         })
 
-        remote.main = { Array }
+        const date = remote.date = new Date
 
-        test('Reference is remapped as you expect', () => {
+        test('Reference is remapped as expect, date is instance of Date', () => {
             expect(() => {
                 remote.eval(
                     `
-                        if (typeof main.Array !== 'function') {
-                            throw new Error('not function')
+                        if (! (date instanceof Date)) {
+                            throw new Error('not Date')
                         }
 
-                        if (main.Array !== Array) {
-                            throw new Error('no equal')
-                        }
+                        date.tainted = 1
                     `
                 )
             }).not.toThrow()
+        })
+
+        test('Reference is remapped back after sandbox get the identity', () => {
+            expect(remote.date).toBe(date)
+        })
+
+        test('Edit the mapped date shouldn\'t matter', () => {
+            expect(remote.date).not.toHaveProperty('tainted')
+        })
+    })
+
+    describe('add well known values', () => {
+        // They both agree Array is 'Array' now
+        const remote = SES.fastInitNode(null, (ctx) => {
+            ctx.registerWellKnownValue('Array', Array)
+        }, (ctx) => {
+            ctx.registerWellKnownValue('Array', Array)
+        })
+
+        test('Well known value always use the local value', () => {
+            expect(Array).toBe(remote.Array)
         })
     })
 })
