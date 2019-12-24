@@ -118,7 +118,7 @@ describe('hooks', () => {
         })
     })
 
-    describe('remap reference (combine token meta and custom proxy init)', () => {
+    describe('remap reference to new object (combine token meta and custom proxy init)', () => {
         const remote = SES.fastInitNode(null, (ctx) => {
             ctx.registerMetaCallback(obj => {
                 if (obj instanceof Date) {
