@@ -212,6 +212,8 @@ export namespace API {
             shared: IShared,
             proxyToToken: WeakMap<object, Token>,
             tokenToProxy: WeakMap<Token, object>,
+            redirectedToToken: WeakMap<object, Token>,
+            tokenToRedirected: WeakMap<Token, object>,
             realToToken: WeakMap<any, Token>,
             tokenToReal: WeakMap<Token, any>,
             unwrap: IUnwrap,

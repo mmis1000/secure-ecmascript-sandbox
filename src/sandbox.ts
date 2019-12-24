@@ -99,6 +99,12 @@ export function init(configureCallback ?: API.ConfigureCallback) {
         // proxy in this world to token from external
         const proxyToToken = new FWeakMap<object, Token>()
 
+        // token from external world to proxy in this world
+        const tokenToRedirected = new FWeakMap<Token, object>()
+
+        // proxy in this world to token from external
+        const redirectedToToken = new FWeakMap<object, Token>()
+
         // not freezing these until configure complete
         const metaAttachCallBacks: API.IMetaAttach<any>[] = []
         const proxyInitCallbacks: API.ICustomProxyInit[] = []
@@ -144,6 +150,10 @@ export function init(configureCallback ?: API.ConfigureCallback) {
          * @param obj 
          */
         function toToken<T extends object>(obj: T, world: World, type: 'function' | 'object'): Token {
+            if (redirectedToToken.has(obj)) {
+                return redirectedToToken.get(obj)!
+            }
+
             if (proxyToToken.has(obj)) {
                 return proxyToToken.get(obj)!
             }
@@ -199,6 +209,13 @@ export function init(configureCallback ?: API.ConfigureCallback) {
                 return {
                     success: true,
                     value: real
+                }
+            }
+
+            if (FBWeakMapHas(tokenToRedirected, token)) {
+                return {
+                    success: true,
+                    value: FBWeakMapGet(tokenToRedirected, token)
                 }
             }
 
@@ -550,6 +567,8 @@ export function init(configureCallback ?: API.ConfigureCallback) {
             currentWorld,
             proxyToToken,
             tokenToProxy,
+            redirectedToToken,
+            tokenToRedirected,
             proxyInitCallbacks
         )
 
@@ -563,6 +582,8 @@ export function init(configureCallback ?: API.ConfigureCallback) {
                 shared,
                 proxyToToken,
                 tokenToProxy,
+                tokenToRedirected,
+                redirectedToToken,
                 realToToken,
                 tokenToReal,
                 unwrap,

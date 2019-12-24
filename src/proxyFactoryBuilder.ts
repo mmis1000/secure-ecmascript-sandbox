@@ -27,6 +27,8 @@ export function createProxyFactory(
     currentWorld: World,
     proxyToToken: WeakMap<object, Token>,
     tokenToProxy: WeakMap<Token, object>,
+    redirectedToToken: WeakMap<object, Token>,
+    tokenToRedirected: WeakMap<Token, object>,
     proxyInitCallbacks: API.ICustomProxyInit[]
 ) {
     'use strict';
@@ -242,7 +244,8 @@ export function createProxyFactory(
 
         // distort it
         if (res != null) {
-            FBWeakMapSet(tokenToProxy, token, res)
+            FBWeakMapSet(tokenToRedirected, token, res)
+            FBWeakMapSet(redirectedToToken, res, token)
         }
 
         return res != null ? res : proxy
