@@ -4,14 +4,12 @@ import {
 } from './sharedFactory'
 
 import {
-    Command,
     API,
     Token,
     Response,
     ValueWrapperRecord,
     ValueWrapperWellKnown,
     ValueWrapper,
-    ResponseSuccess,
     ResponseFailed,
     World,
 } from './interface.js'
@@ -49,10 +47,6 @@ export function init(configureCallback ?: API.ConfigureCallback) {
 
     const FError = shared.FError
 
-    const FCall = shared.FCall
-    const FApply = shared.FApply
-    const FBind = shared.FBind
-
     const FMap = shared.FMap
     const FBMapSet = shared.FBMapSet
     const FBMapGet = shared.FBMapGet
@@ -67,14 +61,9 @@ export function init(configureCallback ?: API.ConfigureCallback) {
     const FReflect = shared.FReflect
 
     const FCreateEmpty = shared.FCreateEmpty
-    const FSetPrototypeOf = shared.FSetPrototypeOf
-    const FGetPrototypeOf = shared.FGetPrototypeOf
-
-    const FGetOwnPropertyDescriptor = shared.FGetOwnPropertyDescriptor
 
     const FBArrayMap = shared.FBArrayMap
     const FBArrayToIterator = shared.FBArrayToIterator
-    const FResolveDesc = shared.FResolveDesc
 
     const dropPrototypeRecursive = shared.dropPrototypeRecursive
     const safeGetProp = shared.safeGetProp
@@ -115,7 +104,7 @@ export function init(configureCallback ?: API.ConfigureCallback) {
         const wellKnownValues = new FMap<string | symbol, any>()
         const wellKnownValuesReversed = new FMap<any, string | symbol>()
 
-        FSetPrototypeOf(customTraps, null)
+        FReflect.setPrototypeOf(customTraps, null)
 
         const registerMetaCallback: API.RegisterMetaCallback = (cb) => {
             metaAttachCallBacks[metaAttachCallBacks.length] = cb

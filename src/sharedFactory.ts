@@ -9,6 +9,7 @@ const SES = {
         DEV = value
     }
 }
+
 export function makeShared() {
     'use strict';
 
@@ -17,8 +18,6 @@ export function makeShared() {
     const FError = Error
 
     const FCall = Function.prototype.call
-    const FApply = Function.prototype.apply
-    const FBind = Function.prototype.bind
 
     const FMap = Map
     const FMapHas = Map.prototype.has
@@ -211,9 +210,6 @@ export function makeShared() {
     const shared = {
         FProxy,
         FError,
-        FCall,
-        FApply,
-        FBind,
         FMap,
         FBMapHas,
         FBMapGet,
@@ -226,9 +222,6 @@ export function makeShared() {
         FBArrayToIterator,
         FReflect,
         FCreateEmpty,
-        FSetPrototypeOf,
-        FGetPrototypeOf,
-        FGetOwnPropertyDescriptor,
         FFreeze,
         FIsFrozen,
         FResolveDesc,

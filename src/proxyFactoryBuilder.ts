@@ -48,28 +48,11 @@ export function createProxyFactory(
     const FProxy = shared.FProxy
     const FError = shared.FError
 
-    const FCall = shared.FCall
-    const FApply = shared.FApply
-    const FBind = shared.FBind
-
-    const FMap = shared.FMap
-
-    const FWeakMap = shared.FWeakMap
-
-    const FBWeakMapHas = shared.FBWeakMapHas
     const FBWeakMapSet = shared.FBWeakMapSet
-    const FBWeakMapGet = shared.FBWeakMapGet
 
     const FReflect = shared.FReflect
 
-    const FCreateEmpty = shared.FCreateEmpty
-    const FSetPrototypeOf = shared.FSetPrototypeOf
-    const FGetPrototypeOf = shared.FGetPrototypeOf
-
-    const FGetOwnPropertyDescriptor = shared.FGetOwnPropertyDescriptor
-
     const FBArrayMap = shared.FBArrayMap
-    const FBArrayToIterator = shared.FBArrayToIterator
     const FResolveDesc = shared.FResolveDesc
 
     const dropPrototypeRecursive = shared.dropPrototypeRecursive

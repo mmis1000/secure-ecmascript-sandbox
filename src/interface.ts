@@ -2,12 +2,6 @@ import {
     IShared
 } from './sharedFactory'
 
-interface CommandGetRoot {
-    type: "GetRoot"
-}
-
-export type Command = CommandGetRoot
-
 interface ValueWrapperPrimitive {
     type: 'primitive',
     value: undefined | null | string | number | bigint | boolean | symbol
@@ -63,8 +57,6 @@ type MapToValueWrapperList<T> = {
 }
 
 type BeArray<T> = T extends any[] ? T : never
-
-type Unshift<T extends any[], U> = ((arg: U, ...args: T) => void) extends ((...args: infer X) => void) ? X : never
 
 type MapToHook<T extends { [key: string]: (...args: any[])=>any}> = {
     [K in keyof T]: (...args: BeArray<MapToValueWrapperList<Parameters<T[K]>>>) => Response<ValueWrapper, ValueWrapper>
