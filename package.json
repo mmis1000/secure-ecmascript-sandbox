@@ -1,5 +1,5 @@
 {
-  "name": "@mmis1000/secure-es-revolution",
+  "name": "@mmis1000/secure-es-wrapper",
   "version": "1.0.0",
   "description": "",
   "main": "lib-cjs/sandbox.js",
