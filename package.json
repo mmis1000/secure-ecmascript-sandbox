@@ -1,13 +1,16 @@
 {
-  "name": "secure-es-revolution",
+  "name": "@mmis1000/secure-es-revolution",
   "version": "1.0.0",
   "description": "",
-  "main": "sandbox.js",
+  "main": "lib-cjs/sandbox.js",
+  "module": "lib/sandbox.js",
   "scripts": {
     "test": "jest",
+    "build": "npx ttsc && npx ttsc -p tsconfig-cjs.json",
     "dev": "npx ttsc -w",
     "dev-cjs": "npx ttsc -w -p tsconfig-cjs.json",
-    "serve": "npx serve -p 9000"
+    "serve": "npx serve -p 9000",
+    "prepublishOnly": "npm test && npm build"
   },
   "author": "",
   "license": "MIT",
