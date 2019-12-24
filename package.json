@@ -1,6 +1,6 @@
 {
   "name": "@mmis1000/secure-es-wrapper",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "lib-cjs/sandbox.js",
   "module": "lib/sandbox.js",
