@@ -6,11 +6,11 @@
   "module": "lib/sandbox.js",
   "scripts": {
     "test": "jest",
-    "build": "npx ttsc && npx ttsc -p tsconfig-cjs.json",
+    "build": "npx ttsc --build tsconfig.json --clean && npx ttsc --build tsconfig-cjs.json --clean && npx ttsc --build --verbose && npx ttsc --build --verbose ./tsconfig-cjs.json",
     "dev": "npx ttsc -w",
     "dev-cjs": "npx ttsc -w -p tsconfig-cjs.json",
     "serve": "npx serve -p 9000",
-    "prepublishOnly": "npm test && npm build"
+    "prepublishOnly": "npm test && npm run-script build"
   },
   "author": "",
   "license": "MIT",
