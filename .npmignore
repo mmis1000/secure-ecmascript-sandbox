@@ -1,4 +1,5 @@
 coverage
 .vscode
 *.png
+*.log
 node_modules
