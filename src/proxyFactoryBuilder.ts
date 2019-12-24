@@ -117,26 +117,24 @@ export function createProxyFactory(
         }
 
         function freezeFakeIfNecessary() {
-            if (FReflect.isExtensible(fakeTarget)) {
+            if (!FReflect.isExtensible(fakeTarget)) {
                 // it is already freezed, isn't it?
                 return
             }
 
-            if (createHandler('trap_preventExtensions')(fakeTarget)) {
-                // update proto
-                FReflect.setPrototypeOf(fakeTarget, createHandler('trap_getPrototypeOf')(fakeTarget))
+            // update proto
+            FReflect.setPrototypeOf(fakeTarget, createHandler('trap_getPrototypeOf')(fakeTarget))
 
-                // update property
-                var keys = createHandler('trap_ownKeys')(fakeTarget)
-                var getOwnDesc = createHandler('trap_getOwnPropertyDescriptor')
+            // update property
+            var keys = createHandler('trap_ownKeys')(fakeTarget)
+            var getOwnDesc = createHandler('trap_getOwnPropertyDescriptor')
 
-                for (let i = 0; i < keys.length; i++) {
-                    const desc = getOwnDesc(fakeTarget, i)
-                    FReflect.defineProperty(fakeTarget, keys[i], desc)
-                }
-
-                FReflect.preventExtensions(fakeTarget)
+            for (let i = 0; i < keys.length; i++) {
+                const desc = getOwnDesc(fakeTarget, keys[i])
+                FReflect.defineProperty(fakeTarget, keys[i], desc)
             }
+
+            FReflect.preventExtensions(fakeTarget)
         }
 
         const defaultHandlers: Omit<Required<ProxyHandler<any>>, 'enumerate'> = {

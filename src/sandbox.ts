@@ -619,7 +619,7 @@ export function createScript(obj: any) {
     return text
 }
 
-export function fastInit(root: any, configureCallback ?: API.ConfigureCallback, remoteConfigureCallback ?: API.ConfigureCallback) {
+/* istanbul ignore next */ export function fastInit(root: any, configureCallback ?: API.ConfigureCallback, remoteConfigureCallback ?: API.ConfigureCallback) {
 
     const createRoot = init(configureCallback)
     const server = createRoot(root)
@@ -658,13 +658,15 @@ export function fastInitNode(root: any, configureCallback ?: API.ConfigureCallba
     const createRoot = init(configureCallback)
     const server = createRoot(root)
     
+
+    // if (/cov_[a-zA-Z0-9]+/.test(text)) {
+    //     console.log(text.match(/cov_[a-zA-Z0-9]+/)![0])
+    //     text = 'const ' + text.match(/cov_[a-zA-Z0-9]+/)![0] + ' = {};\n' + text
+    // }
+
     const rawRealGlobalExpr = `(0, eval)("'use strict'; this")`
 
-    const { runInNewContext } = require('vm')
-
-    let sandboxGlobal = runInNewContext(rawRealGlobalExpr)
-
-    let realm = sandboxGlobal.eval(`
+    let fullScript = `
         "use strict";
 
         const SES = ${createScript(SES)}
@@ -672,7 +674,25 @@ export function fastInitNode(root: any, configureCallback ?: API.ConfigureCallba
         const createRoot = SES.init(${remoteConfigureCallback ? remoteConfigureCallback.toString() : ''})
         const server = createRoot(${rawRealGlobalExpr})
         server
-    `)
+    `
+
+    /* istanbul ignore next */ if (process.env.NODE_ENV === 'test' && /cov_[a-zA-Z0-9]+/.test(fullScript)) {
+        const ids = new Set(fullScript.match(/cov_[a-zA-Z0-9]+/g))
+
+        let prepend = `"use strict";\n`
+
+        for (let id of ids) {
+            prepend += `const ${id} = (0, eval)("'use strict'; this").${id}  = { a: [], b: new Proxy([], { get: () => [] }), f: [], s: [] };\n`
+        }
+
+        fullScript = prepend + fullScript
+    }
+
+    const { runInNewContext } = require('vm')
+
+    let sandboxGlobal = runInNewContext(rawRealGlobalExpr)
+
+    let realm = sandboxGlobal.eval(fullScript)
 
     sandboxGlobal = null // throw the reference away
 

@@ -10,7 +10,7 @@ describe('basic', () => {
 
     let sandboxGlobal = runInNewContext(rawRealGlobalExpr)
 
-    let realm = sandboxGlobal.eval(`
+    let fullScript = `
         "use strict";
 
         const SES = ${SES.createScript(SES)}
@@ -18,7 +18,21 @@ describe('basic', () => {
         const createRoot = SES.init()
         const server = createRoot(${rawRealGlobalExpr})
         server
-    `)
+    `
+    
+    /* istanbul ignore next */ if (process.env.NODE_ENV === 'test' && /cov_[a-zA-Z0-9]+/.test(fullScript)) {
+        const ids = new Set(fullScript.match(/cov_[a-zA-Z0-9]+/g))
+
+        let prepend = `"use strict";\n`
+
+        for (let id of ids) {
+            prepend += `const ${id} = (0, eval)("'use strict'; this").${id}  = { a: [], b: new Proxy([], { get: () => [] }), f: [], s: [] };\n`
+        }
+
+        fullScript = prepend + fullScript
+    }
+
+    let realm = sandboxGlobal.eval(fullScript)
 
     const remote = server.create(realm)
     remote.global = remote
@@ -80,6 +94,13 @@ describe('basic', () => {
 
         expect(sandboxGlobal.obj2).not.toBeUndefined()
         expect(sandboxGlobal.obj2).not.toBe(obj2)
+    })
 
+    test('forward frozen', () => {
+        remote.eval(`
+            global.obj3 = { a: 1 }
+            Object.freeze(global.obj3)
+        `)
+        expect(Object.isFrozen(remote.obj3)).toBe(true)
     })
 });
