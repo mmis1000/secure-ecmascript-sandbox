@@ -50,7 +50,7 @@ export interface Token {
     meta: Record<string, any>
 }
 
-type ProxyHandlers = Omit<Required<ProxyHandler<any>>, 'enumerate'>
+export type ProxyHandlers = Omit<Required<ProxyHandler<any>>, 'enumerate'>
 
 type MapToValueWrapperList<T> = {
     [K in keyof T]-?: ValueWrapper
