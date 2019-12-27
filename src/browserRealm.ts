@@ -54,9 +54,13 @@ export const createRealm = () => {
             'Float32Array',
             'Float64Array',
             'Function', // dangerous
+
+            ['TypedArray', Reflect.getPrototypeOf(Int8Array)],
+
             'Int8Array',
             'Int16Array',
             'Int32Array',
+
             'Map',
             'Number',
             'Object',
@@ -71,10 +75,12 @@ export const createRealm = () => {
             'Symbol',
             'SyntaxError',
             'TypeError',
+
             'Uint8Array',
             'Uint8ClampedArray',
             'Uint16Array',
             'Uint32Array',
+
             'URIError',
             'WeakMap',
             'WeakSet',
@@ -103,16 +109,22 @@ export const createRealm = () => {
             'DataView',
             'Date', // Unstable
             'Map',
+
+            ['TypedArray', Reflect.getPrototypeOf(Int8Array)],
+
             'Int8Array',
             'Int16Array',
             'Int32Array',
+
             'RegExp', // Unstable
             'Set',
             'SharedArrayBuffer',
+
             'Uint8Array',
             'Uint8ClampedArray',
             'Uint16Array',
             'Uint32Array',
+
             'WeakMap',
             'WeakSet',
     
@@ -439,7 +451,7 @@ export const createRealm = () => {
 
     const createBrowserRealmClient: API.ConfigureCallback = function (ctx) {
         const WeakMapHas = WeakMap.prototype.has;
-        (window as any).isShadowTarget = (v: any) => WeakMapHas.call(ctx.proxyToToken, v) || WeakMapHas.call(ctx.redirectedToToken, v)
+        (window as any).isShadowTarget = (v: any) => Reflect.apply(WeakMapHas, ctx.proxyToToken, [v]) || Reflect.apply(WeakMapHas,ctx.redirectedToToken, [v])
 
         // If it is class, remap it
         // If the class has prototype, remap it
@@ -476,9 +488,13 @@ export const createRealm = () => {
             'Float32Array',
             'Float64Array',
             'Function', // dangerous
+
+            ['TypedArray', Reflect.getPrototypeOf(Int8Array)],
+
             'Int8Array',
             'Int16Array',
             'Int32Array',
+
             'Map',
             'Number',
             'Object',
@@ -493,10 +509,12 @@ export const createRealm = () => {
             'Symbol',
             'SyntaxError',
             'TypeError',
+
             'Uint8Array',
             'Uint8ClampedArray',
             'Uint16Array',
             'Uint32Array',
+
             'URIError',
             'WeakMap',
             'WeakSet',
@@ -525,16 +543,22 @@ export const createRealm = () => {
             'DataView',
             'Date', // Unstable
             'Map',
+
+            ['TypedArray', Reflect.getPrototypeOf(Int8Array)],
+
             'Int8Array',
             'Int16Array',
             'Int32Array',
+
             'RegExp', // Unstable
             'Set',
             'SharedArrayBuffer',
+
             'Uint8Array',
             'Uint8ClampedArray',
             'Uint16Array',
             'Uint32Array',
+
             'WeakMap',
             'WeakSet',
     
@@ -842,6 +866,7 @@ export const createRealm = () => {
         (${((proto: any, descriptors: any) => {
             for (let key of Reflect.ownKeys(descriptors)) {
                 const original = Reflect.getOwnPropertyDescriptor(proto, key)!
+
                 const shadow = descriptors[key]
                 const remap = (fn: any, shadowFn: any) => {
                     if (typeof fn !== 'function') return fn
@@ -851,7 +876,7 @@ export const createRealm = () => {
                             if (isShadowTarget(thisArg)) {
                                 return Reflect.apply(shadowFn, thisArg, args)
                             } else {
-                                return Reflect.apply(target, thisArg, args)
+                                return Reflect.apply(fn, thisArg, args)
                             }
                         }
                     })
@@ -870,8 +895,8 @@ export const createRealm = () => {
                 } else {
                     remappedDesc = {
                         ...original,
-                        get: original.get && remap(original.get, shadow.value),
-                        set: original.set && remap(original.set, shadow.value)
+                        get: original.get && remap(original.get, shadow.get),
+                        set: original.set && remap(original.set, shadow.set)
                     }
                 }
 

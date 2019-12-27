@@ -4,4 +4,5 @@ import { createRealm } from '../lib/browserRealm.js'
 
 var s = createRealm()
 s.console = console
-s.eval('console.log("hi"); debugger')
+s.test = new Int8Array(10)
+s.eval('debugger; console.log("hi")')
