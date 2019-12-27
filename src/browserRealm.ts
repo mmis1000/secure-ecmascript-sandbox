@@ -279,8 +279,9 @@ export const createRealm = () => {
     
         map(window)
     
+        const TypedArray = Reflect.getPrototypeOf(Uint8Array)
         function allowDirectPass (obj: any) {
-            return Array.isArray(obj) // don't care, just pass the array
+            return obj instanceof (TypedArray as any) || Array.isArray(obj) // don't care, just pass the array
         }
     
         console.log(preservedServerMeta, allowOnlyCalled, banned, idToObject, objectToId)
