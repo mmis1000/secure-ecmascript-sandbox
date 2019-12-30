@@ -1,7 +1,16 @@
 import { API, ValueWrapper, Response, Token, ProxyHandlers, ResponseFailed } from "./interface"
 import * as SES from "./sandbox"
 
-export const createRealm = () => {
+export const createRealm = async () => {
+    type KeyValueList = (string | [string, any])[]
+
+    let ESGlobal!: KeyValueList
+
+    let documentMeta!: {
+        descriptors: any,
+        prototype: any,
+        isExtensible: boolean
+    }
 
     const preservedKeys = new Set()
     /**
@@ -24,9 +33,8 @@ export const createRealm = () => {
         // If it is function, remap it
         // Ban all traps except prototype that need to be remapped
     
-        type KeyValueList = (string | [string, any])[]
     
-        const ESGlobal: KeyValueList = [
+        ESGlobal = [
             // *** 18.1 Value Properties of the Global Object
             'Infinity',
             'NaN',
@@ -278,11 +286,17 @@ export const createRealm = () => {
         }
     
         map(window)
+
     
         const TypedArray = Reflect.getPrototypeOf(Uint8Array)
         function allowDirectPass (obj: any) {
             return obj instanceof (TypedArray as any) || Array.isArray(obj) // don't care, just pass the array
         }
+
+        // specially handle document
+        idToObject.set('document', document)
+        objectToId.set(document, 'document')
+        documentMeta = getMeta(document)
     
         console.log(preservedServerMeta, allowOnlyCalled, banned, idToObject, objectToId)
     
@@ -690,6 +704,10 @@ export const createRealm = () => {
                 }
             }
         }
+
+        // specially handle document
+        idToObject.set('document', document)
+        objectToId.set(document, 'document')
     
         console.log(preservedMeta, allowOnlyCalled, banned, idToObject, objectToId)
     
@@ -856,7 +874,7 @@ export const createRealm = () => {
         })
     }
 
-    const sandbox = SES.fastInit(null, createBrowserRealmServer, createBrowserRealmClient)
+    const sandbox = await SES.fastInit(null, createBrowserRealmServer, createBrowserRealmClient)
 
     const receiver = sandbox.eval(`
         'use strict';
@@ -908,6 +926,46 @@ export const createRealm = () => {
 
     for (let key of preservedKeys) {
         receiver(key, preservedServerMeta.get(key)!.descriptors)
+    }
+
+    const documentReceiver = sandbox.eval(`
+        'use strict';
+
+        (${((descriptors: any, proto: any) => {
+            for (let key of Reflect.ownKeys(descriptors)) {
+                const shadow = descriptors[key]
+                if (shadow.configurable) {
+                    Reflect.defineProperty(window.document, key, shadow)
+                }
+            }
+
+            Reflect.setPrototypeOf(window.document, proto)
+        }).toString()})
+    `)
+
+    documentReceiver(documentMeta.descriptors, documentMeta.prototype)
+
+    const preservedWindowKeys: any[] = []
+
+    for (let item of ESGlobal) {
+        if (typeof item === 'string') {
+            preservedWindowKeys.push(item)
+        }
+    }
+
+    // window -> window prototype -> constructor
+    Reflect.defineProperty(sandbox.Window.prototype, 'constructor', Reflect.getOwnPropertyDescriptor(Window.prototype, 'constructor')!)
+
+    // window -> window prototype -> window properties -> event target prototype
+    for (let key of Reflect.ownKeys(EventTarget.prototype)) {
+        Reflect.defineProperty(sandbox.EventTarget.prototype, key, Reflect.getOwnPropertyDescriptor(EventTarget.prototype, key)!)
+    }
+
+    // everything other
+    for (let key of Reflect.ownKeys(window)) {
+        if (key !== 'eval' && !preservedWindowKeys.includes(key)) {
+            Reflect.defineProperty(sandbox, key, Reflect.getOwnPropertyDescriptor(window, key)!)
+        }
     }
 
     return sandbox

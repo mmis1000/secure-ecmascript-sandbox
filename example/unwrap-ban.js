@@ -2,18 +2,19 @@
 
 import SES from '../lib/sandbox.js'
 
-const remote = /** @type {any} */(window).remote = SES.fastInit(window, (ctx) => {
-    ctx.registerUnwrapCallback(obj => {
-        if (obj === fetch) {
-            throw new Error('now allowed')
-        }
+async function main() {
+    const remote = /** @type {any} */(window).remote = await SES.fastInit(window, (ctx) => {
+        ctx.registerUnwrapCallback(obj => {
+            if (obj === fetch) {
+                throw new Error('now allowed')
+            }
+        })
     })
-})
 
-remote.main = window
-remote.console = console
+    remote.main = window
+    remote.console = console
 
-remote.eval(`
+    remote.eval(`
     const fetch = main.fetch
     console.log('store pointer is fine')
 
@@ -35,3 +36,6 @@ remote.eval(`
         console.error('assign it on main window will crash', err)
     }
 `)
+}
+
+main()

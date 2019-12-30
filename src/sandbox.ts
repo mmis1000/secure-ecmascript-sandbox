@@ -665,7 +665,7 @@ export function createScript(obj: any) {
     return text
 }
 
-/* istanbul ignore next */ export function fastInit(root: any, configureCallback ?: API.ConfigureCallback, remoteConfigureCallback ?: API.ConfigureCallback) {
+/* istanbul ignore next */ export async function fastInit(root: any, configureCallback ?: API.ConfigureCallback, remoteConfigureCallback ?: API.ConfigureCallback) {
 
     const createRoot = init(configureCallback)
     const server = createRoot(root)
@@ -675,6 +675,8 @@ export function createScript(obj: any) {
     iframe.style.display = 'none';
 
     document.body.append(iframe)
+
+    await new Promise(resolve => setTimeout(resolve, 0))
 
     let realm = (iframe.contentWindow as any).eval(`
         "use strict";
