@@ -293,6 +293,7 @@ export const createRealm = async () => {
         const CSSStyleDeclaration = window.CSSStyleDeclaration
         const NamedNodeMap = window.NamedNodeMap
         const DOMTokenList = window.DOMTokenList
+        const CharacterData = window.CharacterData
         const TypedArray = Reflect.getPrototypeOf(Uint8Array)
         function allowDirectPass (obj: any) {
             return obj instanceof (TypedArray as any)
@@ -301,6 +302,7 @@ export const createRealm = async () => {
                 || obj instanceof CSSStyleDeclaration
                 || obj instanceof NamedNodeMap
                 || obj instanceof DOMTokenList
+                || obj instanceof CharacterData
                 || Array.isArray(obj) // don't care, just pass the array
         }
 
