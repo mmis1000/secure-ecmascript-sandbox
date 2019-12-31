@@ -297,6 +297,10 @@ export const createRealm = async () => {
         idToObject.set('document', document)
         objectToId.set(document, 'document')
         documentMeta = getMeta(document)
+
+        // specially handle window
+        idToObject.set('window', window)
+        objectToId.set(window, 'window')
     
         console.log(preservedServerMeta, allowOnlyCalled, banned, idToObject, objectToId)
     
@@ -482,7 +486,7 @@ export const createRealm = async () => {
             'undefined',
         
             // *** 18.2 Function Properties of the Global Object
-            // 'eval', // dangerous // well... we do want to eval in sandbox
+            'eval', // dangerous
             'isFinite',
             'isNaN',
             'parseFloat',
@@ -708,6 +712,10 @@ export const createRealm = async () => {
         // specially handle document
         idToObject.set('document', document)
         objectToId.set(document, 'document')
+
+        // specially handle window
+        idToObject.set('window', window)
+        objectToId.set(window, 'window')
     
         console.log(preservedMeta, allowOnlyCalled, banned, idToObject, objectToId)
     
@@ -726,6 +734,7 @@ export const createRealm = async () => {
     
             if (unwrapResult.success) {
                 if (banned.has(unwrapResult.value) || allowOnlyCalled.has(unwrapResult.value)) {
+                    debugger
                     return {
                         success: false,
                         value: ctx.toWrapper(new Error('not allowed'), ctx.world)
@@ -739,6 +748,7 @@ export const createRealm = async () => {
     
             if (unwrapResult.success) {
                 if (banned.has(unwrapResult.value)) {
+                    debugger
                     return {
                         success: false,
                         value: ctx.toWrapper(new Error('not allowed'), ctx.world)
@@ -874,9 +884,10 @@ export const createRealm = async () => {
         })
     }
 
-    const sandbox = await SES.fastInit(null, createBrowserRealmServer, createBrowserRealmClient)
+    const sandboxEval = await SES.fastInit(null, createBrowserRealmServer, createBrowserRealmClient, 'new Proxy(eval, {})')
+    const sandbox = sandboxEval('new Proxy(window, {})')
 
-    const receiver = sandbox.eval(`
+    const receiver = sandboxEval(`
         'use strict';
 
         const isShadowTarget = window.isShadowTarget;
@@ -928,7 +939,7 @@ export const createRealm = async () => {
         receiver(key, preservedServerMeta.get(key)!.descriptors)
     }
 
-    const documentReceiver = sandbox.eval(`
+    const documentReceiver = sandboxEval(`
         'use strict';
 
         (${((descriptors: any, proto: any) => {
@@ -963,10 +974,12 @@ export const createRealm = async () => {
 
     // everything other
     for (let key of Reflect.ownKeys(window)) {
-        if (key !== 'eval' && !preservedWindowKeys.includes(key)) {
-            Reflect.defineProperty(sandbox, key, Reflect.getOwnPropertyDescriptor(window, key)!)
+        if (key !== 'eval' && !preservedWindowKeys.includes(key) && Reflect.getOwnPropertyDescriptor(window, key)!.configurable) {
+            // try {
+                Reflect.defineProperty(sandbox, key, Reflect.getOwnPropertyDescriptor(window, key)!)
+            // } catch (err) {}
         }
     }
 
-    return sandbox
+    return sandboxEval
 }

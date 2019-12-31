@@ -665,7 +665,12 @@ export function createScript(obj: any) {
     return text
 }
 
-/* istanbul ignore next */ export async function fastInit(root: any, configureCallback ?: API.ConfigureCallback, remoteConfigureCallback ?: API.ConfigureCallback) {
+/* istanbul ignore next */ export async function fastInit(
+    root: any,
+    configureCallback ?: API.ConfigureCallback,
+    remoteConfigureCallback ?: API.ConfigureCallback,
+    remoteRootExpr = "globalThis"
+) {
 
     const createRoot = init(configureCallback)
     const server = createRoot(root)
@@ -684,7 +689,7 @@ export function createScript(obj: any) {
         const SES = ${createScript(SES)}
 
         const createRoot = SES.init(${remoteConfigureCallback ? remoteConfigureCallback.toString() : ''})
-        const server = createRoot(globalThis)
+        const server = createRoot(${remoteRootExpr})
         server
     `)
 
