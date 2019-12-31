@@ -9,7 +9,8 @@ async function main () {
     const test = new Int8Array(10)
     test[0] = 5
     sandbox.test = test
-    sandboxEval(`
+
+    const wait = sandboxEval(`
         debugger;
         console.log("hi");
         console.log(test[0]);
@@ -23,17 +24,30 @@ async function main () {
 
         async function runVue () {
             const { default: Vue } = await import('https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.esm.browser.js')
-            new Vue({
+            window.app = new Vue({
                 el: '#app',
                 data: {
-                    message: 'Hello Vue.js!'
+                    message: 'Hello Vue.js!',
+                    list: []
+                },
+                methods: {
+                    add () { this.list.push({ id: Date.now(), value: Date.now().toString() }) },
+                    remove () { this.list.pop() }
                 }
             })
         }
 
-        runVue()
+        (function (cb) {
+            runVue().then(cb)
+        })
     `)
-    console.log(sandbox.test[0], sandbox.test.hello)
+
+    //the await on returned promise not work in outer realm because we did not remap the promise method in outer realm
+    wait(() => {
+        sandbox.app.list.push({ id: 'outSide', value: 'objectFromOutSide' })
+    
+        console.log(sandbox.test[0], sandbox.test.hello)
+    })
 }
 
 main()

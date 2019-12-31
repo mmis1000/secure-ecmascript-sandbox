@@ -295,6 +295,7 @@ export const createRealm = async () => {
         const DOMTokenList = window.DOMTokenList
         const CharacterData = window.CharacterData
         const TypedArray = Reflect.getPrototypeOf(Uint8Array)
+
         function allowDirectPass (obj: any) {
             return obj instanceof (TypedArray as any)
                 || obj instanceof NodeList
@@ -878,7 +879,7 @@ export const createRealm = async () => {
 
                 initPrototypeIfRequired()
 
-                if (callUnwrapped(token.owner.getCustomTrap('getIsExt'), remapToken)) {
+                if (!callUnwrapped(token.owner.getCustomTrap('getIsExt'), remapToken)) {
                     Reflect.preventExtensions(fakeTarget)
                 }
 
@@ -905,6 +906,7 @@ export const createRealm = async () => {
                 has: createLazyPropHandler(Reflect.has),
                 getOwnPropertyDescriptor: createLazyPropHandler(Reflect.getOwnPropertyDescriptor),
                 deleteProperty: createLazyPropHandler(Reflect.deleteProperty),
+                defineProperty: createLazyPropHandler(Reflect.defineProperty),
 
                 getPrototypeOf: createLazyHandler(Reflect.getPrototypeOf),
                 setPrototypeOf: createLazyHandler(Reflect.setPrototypeOf),
@@ -921,6 +923,7 @@ export const createRealm = async () => {
         })
     }
 
+    // because we can't get the direct reference to well known value either, we use `new Proxy` to bypass it
     const sandboxEval = await SES.fastInit(null, createBrowserRealmServer, createBrowserRealmClient, 'new Proxy(eval, {})')
     const sandbox = sandboxEval('new Proxy(window, {})')
 
