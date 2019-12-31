@@ -165,7 +165,8 @@ export function createProxyFactory(
                 if (desc === undefined || 'value' in desc) {
                     return defaultHandlers.set(target, key, value, receiver)
                 } else if (desc.set) {
-                    return Reflect.apply(desc.set, receiver, [value])
+                    Reflect.apply(desc.set, receiver, [value])
+                    return true
                 } else {
                     return false
                 }
