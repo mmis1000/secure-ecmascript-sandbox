@@ -288,9 +288,20 @@ export const createRealm = async () => {
         map(window)
 
     
+        const NodeList = window.NodeList
+        const HTMLCollection = window.HTMLCollection
+        const CSSStyleDeclaration = window.CSSStyleDeclaration
+        const NamedNodeMap = window.NamedNodeMap
+        const DOMTokenList = window.DOMTokenList
         const TypedArray = Reflect.getPrototypeOf(Uint8Array)
         function allowDirectPass (obj: any) {
-            return obj instanceof (TypedArray as any) || Array.isArray(obj) // don't care, just pass the array
+            return obj instanceof (TypedArray as any)
+                || obj instanceof NodeList
+                || obj instanceof HTMLCollection
+                || obj instanceof CSSStyleDeclaration
+                || obj instanceof NamedNodeMap
+                || obj instanceof DOMTokenList
+                || Array.isArray(obj) // don't care, just pass the array
         }
 
         // specially handle document
@@ -301,6 +312,18 @@ export const createRealm = async () => {
         // specially handle window
         idToObject.set('window', window)
         objectToId.set(window, 'window')
+
+        // specially handle Window prototype
+        idToObject.set('Window.prototype', Window.prototype)
+        objectToId.set(Window.prototype, 'Window.prototype')
+
+        // specially handle Window properties
+        idToObject.set('WindowProperties', Reflect.getPrototypeOf(Window.prototype))
+        objectToId.set(Reflect.getPrototypeOf(Window.prototype), 'WindowProperties')
+
+        // specially handle event target prototype
+        idToObject.set('EventTarget.prototype', EventTarget.prototype)
+        objectToId.set(EventTarget.prototype, 'EventTarget.prototype')
     
         console.log(preservedServerMeta, allowOnlyCalled, banned, idToObject, objectToId)
     
@@ -716,6 +739,18 @@ export const createRealm = async () => {
         // specially handle window
         idToObject.set('window', window)
         objectToId.set(window, 'window')
+
+        // specially handle Window prototype
+        idToObject.set('Window.prototype', Window.prototype)
+        objectToId.set(Window.prototype, 'Window.prototype')
+
+        // specially handle Window properties
+        idToObject.set('WindowProperties', Reflect.getPrototypeOf(Window.prototype))
+        objectToId.set(Reflect.getPrototypeOf(Window.prototype), 'WindowProperties')
+
+        // specially handle event target prototype
+        idToObject.set('EventTarget.prototype', EventTarget.prototype)
+        objectToId.set(EventTarget.prototype, 'EventTarget.prototype')
     
         console.log(preservedMeta, allowOnlyCalled, banned, idToObject, objectToId)
     
@@ -964,12 +999,14 @@ export const createRealm = async () => {
         }
     }
 
+    const sandboxWindowPrototype = sandboxEval('new Proxy(Window.prototype, {})')
     // window -> window prototype -> constructor
-    Reflect.defineProperty(sandbox.Window.prototype, 'constructor', Reflect.getOwnPropertyDescriptor(Window.prototype, 'constructor')!)
+    Reflect.defineProperty(sandboxWindowPrototype, 'constructor', Reflect.getOwnPropertyDescriptor(Window.prototype, 'constructor')!)
 
+    const sandboxEventTargetPrototype = sandboxEval('new Proxy(EventTarget.prototype, {})')
     // window -> window prototype -> window properties -> event target prototype
     for (let key of Reflect.ownKeys(EventTarget.prototype)) {
-        Reflect.defineProperty(sandbox.EventTarget.prototype, key, Reflect.getOwnPropertyDescriptor(EventTarget.prototype, key)!)
+        Reflect.defineProperty(sandboxEventTargetPrototype, key, Reflect.getOwnPropertyDescriptor(EventTarget.prototype, key)!)
     }
 
     // everything other

@@ -3,7 +3,7 @@
 import { createRealm } from '../lib/browserRealm.js'
 
 async function main () {
-    var sandboxEval = await createRealm()
+    var sandboxEval = /** @type {any} */(window).remoteEval = await createRealm()
     var sandbox = /** @type {any} */(window).remote = sandboxEval('new Proxy(window, {})')
     sandbox.console = console
     const test = new Int8Array(10)
