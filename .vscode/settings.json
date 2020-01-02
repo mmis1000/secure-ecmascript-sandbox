@@ -3,5 +3,6 @@
         "buildins",
         "proto",
         "proxied"
-    ]
+    ],
+    "typescript.tsdk": "node_modules/typescript/lib"
 }

@@ -29,13 +29,33 @@ export function makeShared() {
     const FWeakMapSet = WeakMap.prototype.set
     const FWeakMapGet = WeakMap.prototype.get
 
-    const FBWeakMapHas = FCall.bind(FWeakMapHas)
-    const FBWeakMapSet = FCall.bind(FWeakMapSet)
-    const FBWeakMapGet = FCall.bind(FWeakMapGet)
 
-    const FBMapHas = FCall.bind(FMapHas)
-    const FBMapSet = FCall.bind(FMapSet)
-    const FBMapGet = FCall.bind(FMapGet)
+    const FBWeakMapHas: (self: WeakMap<any, any>, ...args: any[]) => any = FCall.bind(FWeakMapHas)
+    const FBWeakMapSet: (self: WeakMap<any, any>, ...args: any[]) => any = FCall.bind(FWeakMapSet)
+    const FBWeakMapGet: (self: WeakMap<any, any>, ...args: any[]) => any = FCall.bind(FWeakMapGet)
+
+    const FBMapHas: (self: Map<any, any>, ...args: any[]) => any = FCall.bind(FMapHas)
+    const FBMapSet: (self: Map<any, any>, ...args: any[]) => any = FCall.bind(FMapSet)
+    const FBMapGet: (self: Map<any, any>, ...args: any[]) => any = FCall.bind(FMapGet)
+
+
+    const FSet = Set
+    const FSetHas = Set.prototype.has
+    const FSetAdd = Set.prototype.add
+    const FSetDelete = Set.prototype.delete
+
+    const FWeakSet = WeakSet
+    const FWeakSetHas = WeakSet.prototype.has
+    const FWeakSetAdd = WeakSet.prototype.add
+    const FWeakSetDelete = WeakSet.prototype.delete
+
+    const FBSetHas: (self: Set<any>, ...args: any[]) => any = FCall.bind(FSetHas)
+    const FBSetAdd: (self: Set<any>, ...args: any[]) => any  = FCall.bind(FSetAdd)
+    const FBSetDelete: (self: Set<any>, ...args: any[]) => any  = FCall.bind(FSetDelete)
+
+    const FBWeakSetHas: (self: WeakSet<any>, ...args: any[]) => any = FCall.bind(FWeakSetHas)
+    const FBWeakSetAdd: (self: WeakSet<any>, ...args: any[]) => any  = FCall.bind(FWeakSetAdd)
+    const FBWeakSetDelete: (self: WeakSet<any>, ...args: any[]) => any  = FCall.bind(FWeakSetDelete)
 
     const FArrayMap = Array.prototype.map
     const FBArrayMap = FCall.bind(FArrayMap)
@@ -210,14 +230,27 @@ export function makeShared() {
     const shared = {
         FProxy,
         FError,
+
         FMap,
         FBMapHas,
         FBMapGet,
         FBMapSet,
+
         FWeakMap,
         FBWeakMapHas,
         FBWeakMapSet,
         FBWeakMapGet,
+
+        FSet,
+        FBSetHas,
+        FBSetAdd,
+        FBSetDelete,
+
+        FWeakSet,
+        FBWeakSetHas,
+        FBWeakSetAdd,
+        FBWeakSetDelete,
+
         FBArrayMap,
         FBArrayToIterator,
         FReflect,

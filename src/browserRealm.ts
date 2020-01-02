@@ -151,34 +151,45 @@ const getSharedInit = (
     }>,
 ) => {
     return (ctx: Parameters<API.ConfigureCallback>[0]) => {
-        const WeakMapHas = WeakMap.prototype.has;
-        isShadowTargetContainer.value = (v: any) => Reflect.apply(WeakMapHas, ctx.proxyToToken, [v]) || Reflect.apply(WeakMapHas,ctx.redirectedToToken, [v])
+        const FBArrayToIterator = ctx.shared.FBArrayToIterator
+        const FReflect = ctx.shared.FReflect
+        const FBWeakMapHas = ctx.shared.FBWeakMapHas
+        const FBWeakMapSet = ctx.shared.FBWeakMapSet
+        const FBWeakMapGet = ctx.shared.FBWeakMapGet
+        const FBMapHas = ctx.shared.FBMapHas
+        const FBMapSet = ctx.shared.FBMapSet
+        const FBMapGet = ctx.shared.FBMapGet
+        const FBSetAdd = ctx.shared.FBSetAdd
+        const FBSetHas = ctx.shared.FBSetHas
+        const FError = ctx.shared.FError
+
+        isShadowTargetContainer.value = (v: any) => FBWeakMapHas(ctx.proxyToToken, v) || FBWeakMapHas(ctx.redirectedToToken, v)
 
         const banAndMap = (key: string, value: any) => {
             if ((typeof value === 'object' || typeof value === 'function') && value != null) {
-                banned.add(value)
-                idToObject.set(key, value)
-                objectToId.set(value, key)
+                FBSetAdd(banned, value)
+                FBMapSet(idToObject, key, value)
+                FBMapSet(objectToId, value, key)
             }
         }
     
         const ban = (value: any) => {
             if ((typeof value === 'object' || typeof value === 'function') && value != null) {
-                banned.add(value)
+                FBSetAdd(banned, value)
             }
         }
     
         const allowOnlyCallIfFunction = (fn: any) => {
             if (typeof fn === 'function' && !banned.has(fn)) {
-                allowOnlyCalled.add(fn)
+                FBSetAdd(allowOnlyCalled, fn)
             }
         }
     
         const getMeta = (obj: any) => {
             const descriptors = Object.create(null)
     
-            for (let propertyKey of Reflect.ownKeys(obj)) {
-                const desc = Reflect.getOwnPropertyDescriptor(obj, propertyKey)!
+            for (let propertyKey of FReflect.ownKeys(obj)) {
+                const desc = FReflect.getOwnPropertyDescriptor(obj, propertyKey)!
                 descriptors[propertyKey] = desc
     
                 allowOnlyCallIfFunction(desc.value)
@@ -186,8 +197,8 @@ const getSharedInit = (
                 allowOnlyCallIfFunction(desc.set)
             }
     
-            const prototype = Reflect.getPrototypeOf(obj)
-            const isExtensible = Reflect.isExtensible(obj)
+            const prototype = FReflect.getPrototypeOf(obj)
+            const isExtensible = FReflect.isExtensible(obj)
     
             return {
                 descriptors,
@@ -197,7 +208,7 @@ const getSharedInit = (
         }
     
         // remap es global
-        for (let item of ESGlobal) {
+        for (let item of FBArrayToIterator(ESGlobal)) {
             let key: string
             let value: any
             if (typeof item === 'string') {
@@ -211,7 +222,7 @@ const getSharedInit = (
             if (value != null && (typeof value === 'object' || typeof value === 'function')) {
                 banAndMap(key, value)
     
-                for (let propertyKey of Reflect.ownKeys(value)) {
+                for (let propertyKey of FReflect.ownKeys(value)) {
                     if (propertyKey === 'prototype') {
                         banAndMap(key + '.' + propertyKey, value.prototype)
                     } else {
@@ -222,7 +233,7 @@ const getSharedInit = (
         }
     
         // preserve prototype methods only when required
-        for (let item of allowPrototypeMethods) {
+        for (let item of FBArrayToIterator(allowPrototypeMethods)) {
             let key: string
             let value: any
             if (typeof item === 'string') {
@@ -235,12 +246,12 @@ const getSharedInit = (
     
             if (value != null && (typeof value === 'object' || typeof value === 'function')) {
                 if (value.prototype) {
-                    preservedKeys.add(value.prototype)
+                    FBSetAdd(preservedKeys, value.prototype)
 
                     const descriptors = Object.create(null)
     
-                    for (let propertyKey of Reflect.ownKeys(value.prototype)) {
-                        const desc = Reflect.getOwnPropertyDescriptor(value.prototype, propertyKey)!
+                    for (let propertyKey of FBArrayToIterator((FReflect.ownKeys(value.prototype)))) {
+                        const desc = FReflect.getOwnPropertyDescriptor(value.prototype, propertyKey)!
                         descriptors[propertyKey] = desc
     
                         allowOnlyCallIfFunction(desc.value)
@@ -248,41 +259,41 @@ const getSharedInit = (
                         allowOnlyCallIfFunction(desc.set)
                     }
     
-                    const prototype = Reflect.getPrototypeOf(value)
-                    const isExtensible = Reflect.isExtensible(value)
+                    const prototype = FReflect.getPrototypeOf(value)
+                    const isExtensible = FReflect.isExtensible(value)
     
-                    preservedMeta.set(value.prototype, getMeta(value.prototype))
+                    FBWeakMapSet(preservedMeta, value.prototype, getMeta(value.prototype))
                 }
             }
         }
 
         // specially handle document
-        idToObject.set('document', document)
-        objectToId.set(document, 'document')
+        FBMapSet(idToObject, 'document', document)
+        FBMapSet(objectToId, document, 'document')
         documentMetaContainer.value = getMeta(document)
 
         // specially handle window
-        idToObject.set('window', window)
-        objectToId.set(window, 'window')
+        FBMapSet(idToObject, 'window', window)
+        FBMapSet(objectToId, window, 'window')
 
         // specially handle Window prototype
-        idToObject.set('Window.prototype', Window.prototype)
-        objectToId.set(Window.prototype, 'Window.prototype')
+        FBMapSet(idToObject, 'Window.prototype', Window.prototype)
+        FBMapSet(objectToId, Window.prototype, 'Window.prototype')
 
         // specially handle Window properties
-        idToObject.set('WindowProperties', Reflect.getPrototypeOf(Window.prototype))
-        objectToId.set(Reflect.getPrototypeOf(Window.prototype), 'WindowProperties')
+        FBMapSet(idToObject, 'WindowProperties', FReflect.getPrototypeOf(Window.prototype))
+        FBMapSet(objectToId, FReflect.getPrototypeOf(Window.prototype), 'WindowProperties')
 
         // specially handle event target prototype
-        idToObject.set('EventTarget.prototype', EventTarget.prototype)
-        objectToId.set(EventTarget.prototype, 'EventTarget.prototype')
+        FBMapSet(idToObject, 'EventTarget.prototype', EventTarget.prototype)
+        FBMapSet(objectToId, EventTarget.prototype, 'EventTarget.prototype')
 
         for (let [id, value] of idToObject) {
             ctx.registerWellKnownValue(id, value)
         }
 
         ctx.registerUnwrapCallback((val) => {
-            if (banned.has(val)) {
+            if (FBSetHas(banned, val)) {
                 // debugger
                 // throw new Error('forbidden')
             }
@@ -292,11 +303,11 @@ const getSharedInit = (
             const unwrapResult = ctx.unwrap(token)
     
             if (unwrapResult.success) {
-                if (banned.has(unwrapResult.value) || allowOnlyCalled.has(unwrapResult.value)) {
+                if (FBSetHas(banned, unwrapResult.value) || FBSetHas(allowOnlyCalled, unwrapResult.value)) {
                     debugger
                     return {
                         success: false,
-                        value: ctx.toWrapper(new Error('not allowed'), ctx.world)
+                        value: ctx.toWrapper(new FError('not allowed'), ctx.world)
                     }
                 }
             }
@@ -306,11 +317,11 @@ const getSharedInit = (
             const unwrapResult = ctx.unwrap(token)
     
             if (unwrapResult.success) {
-                if (banned.has(unwrapResult.value)) {
+                if (FBSetHas(banned, unwrapResult.value)) {
                     debugger
                     return {
                         success: false,
-                        value: ctx.toWrapper(new Error('not allowed'), ctx.world)
+                        value: ctx.toWrapper(new FError('not allowed'), ctx.world)
                     }
                 }
             }
@@ -697,6 +708,7 @@ const getClientInit = (
         })
     }
 }
+
 export const createRealm = async () => {
 
     let ESGlobal!: KeyValueList
