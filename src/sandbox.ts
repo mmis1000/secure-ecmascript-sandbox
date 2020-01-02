@@ -671,17 +671,21 @@ export function createScript(obj: any) {
     remoteConfigureCallback ?: API.ConfigureCallback | string,
     remoteRootExpr = "globalThis"
 ) {
-
-    const createRoot = init(configureCallback)
-    const server = createRoot(root)
-
     let iframe = document.createElement('iframe')
+
+    iframe.src = 'about:blank'
     iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
-    iframe.style.display = 'none';
+    iframe.style.display = 'none'
 
     document.body.append(iframe)
 
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await Promise.race([
+        new Promise(resolve => iframe.onload = resolve),
+        new Promise(resolve => setTimeout(resolve, 100))
+    ])
+
+    const createRoot = init(configureCallback)
+    const server = createRoot(root)
 
     let realm = (iframe.contentWindow as any).eval(`
         "use strict";
