@@ -194,6 +194,17 @@ export function createProxyFactory(
                     throw err
                 }
             },
+            // this need to be specially handled
+            defineProperty(target, key, desc) {
+                const success = defaultHandlers.defineProperty(target, key, desc)
+
+                // satisfy the invariant limit if define is successful and descriptor is not configurable
+                if (success && !desc.configurable) {
+                    Reflect.defineProperty(fakeTarget, key, desc)
+                }
+
+                return success
+            },
             // this will crash if not handled correctly, so it also need to be specially handled
             isExtensible(target) {
                 const extensible = defaultHandlers.isExtensible(target)

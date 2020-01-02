@@ -668,7 +668,7 @@ export function createScript(obj: any) {
 /* istanbul ignore next */ export async function fastInit(
     root: any,
     configureCallback ?: API.ConfigureCallback,
-    remoteConfigureCallback ?: API.ConfigureCallback,
+    remoteConfigureCallback ?: API.ConfigureCallback | string,
     remoteRootExpr = "globalThis"
 ) {
 
@@ -707,7 +707,7 @@ export function createScript(obj: any) {
     return remote
 }
 
-export function fastInitNode(root: any, configureCallback ?: API.ConfigureCallback, remoteConfigureCallback ?: API.ConfigureCallback) {
+export function fastInitNode(root: any, configureCallback ?: API.ConfigureCallback, remoteConfigureCallback ?: API.ConfigureCallback | string) {
     const createRoot = init(configureCallback)
     const server = createRoot(root)
 
