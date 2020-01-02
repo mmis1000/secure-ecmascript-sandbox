@@ -905,7 +905,7 @@ export const createRealm = async () => {
 
     // everything other
     for (let key of Reflect.ownKeys(window)) {
-        if (key !== 'eval' && !preservedWindowKeys.includes(key)) {
+        if (key !== 'eval' && !preservedWindowKeys.includes(key) && Reflect.getOwnPropertyDescriptor(window, key)!.configurable) {
             Reflect.defineProperty(sandbox, key, Reflect.getOwnPropertyDescriptor(window, key)!)
         }
     }
