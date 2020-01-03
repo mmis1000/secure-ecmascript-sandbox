@@ -1,12 +1,16 @@
-export let DEV = true
+export let DEV = false
+
+export const flags = {
+    DEV: false
+}
 
 const SES = {
     get DEV () {
-        return DEV
+        return flags.DEV
     },
 
     set DEV (value) {
-        DEV = value
+        flags.DEV = value
     }
 }
 

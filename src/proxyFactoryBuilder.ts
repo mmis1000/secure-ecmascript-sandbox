@@ -1,6 +1,6 @@
 import {
     IShared,
-    DEV
+    flags
 } from './sharedFactory'
 
 import {
@@ -13,11 +13,11 @@ import {
 
 const SES = {
     get DEV () {
-        return DEV
+        return flags.DEV
     },
 
     set DEV (value) {
-        (DEV as any) = value
+        flags.DEV = value
     }
 }
 export function createProxyFactory(

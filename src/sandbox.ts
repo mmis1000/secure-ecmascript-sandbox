@@ -1,6 +1,6 @@
 import {
     makeShared,
-    DEV
+    flags
 } from './sharedFactory'
 
 import {
@@ -26,11 +26,11 @@ const SES = {
     fastInit,
     fastInitNode,
     get DEV () {
-        return DEV
+        return flags.DEV
     },
 
     set DEV (value) {
-        (DEV as any) = value
+        flags.DEV = value
     }
 }
 

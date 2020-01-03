@@ -1,5 +1,8 @@
 // @ts-check
 
+import SES from '../lib/sandbox.js'
+// force dev mode or it will not work because es import is disabled when iframe detached
+SES.DEV = true
 import { createRealm } from '../lib/browserRealm.js'
 
 async function main () {
