@@ -155,13 +155,11 @@ const getSharedInit = (
         const FReflect = ctx.shared.FReflect
         const FBWeakMapHas = ctx.shared.FBWeakMapHas
         const FBWeakMapSet = ctx.shared.FBWeakMapSet
-        const FBWeakMapGet = ctx.shared.FBWeakMapGet
-        const FBMapHas = ctx.shared.FBMapHas
         const FBMapSet = ctx.shared.FBMapSet
-        const FBMapGet = ctx.shared.FBMapGet
         const FBSetAdd = ctx.shared.FBSetAdd
         const FBSetHas = ctx.shared.FBSetHas
         const FError = ctx.shared.FError
+        const FCreateEmpty = ctx.shared.FCreateEmpty
 
         isShadowTargetContainer.value = (v: any) => FBWeakMapHas(ctx.proxyToToken, v) || FBWeakMapHas(ctx.redirectedToToken, v)
 
@@ -186,7 +184,7 @@ const getSharedInit = (
         }
     
         const getMeta = (obj: any) => {
-            const descriptors = Object.create(null)
+            const descriptors = FCreateEmpty({})
     
             for (let propertyKey of FReflect.ownKeys(obj)) {
                 const desc = FReflect.getOwnPropertyDescriptor(obj, propertyKey)!
@@ -248,7 +246,7 @@ const getSharedInit = (
                 if (value.prototype) {
                     FBSetAdd(preservedKeys, value.prototype)
 
-                    const descriptors = Object.create(null)
+                    const descriptors = FCreateEmpty({})
     
                     for (let propertyKey of FBArrayToIterator((FReflect.ownKeys(value.prototype)))) {
                         const desc = FReflect.getOwnPropertyDescriptor(value.prototype, propertyKey)!
@@ -258,9 +256,6 @@ const getSharedInit = (
                         allowOnlyCallIfFunction(desc.get)
                         allowOnlyCallIfFunction(desc.set)
                     }
-    
-                    const prototype = FReflect.getPrototypeOf(value)
-                    const isExtensible = FReflect.isExtensible(value)
     
                     FBWeakMapSet(preservedMeta, value.prototype, getMeta(value.prototype))
                 }
@@ -304,7 +299,6 @@ const getSharedInit = (
     
             if (unwrapResult.success) {
                 if (FBSetHas(banned, unwrapResult.value) || FBSetHas(allowOnlyCalled, unwrapResult.value)) {
-                    debugger
                     return {
                         success: false,
                         value: ctx.toWrapper(new FError('not allowed'), ctx.world)
@@ -318,7 +312,6 @@ const getSharedInit = (
     
             if (unwrapResult.success) {
                 if (FBSetHas(banned, unwrapResult.value)) {
-                    debugger
                     return {
                         success: false,
                         value: ctx.toWrapper(new FError('not allowed'), ctx.world)
@@ -382,17 +375,30 @@ const getServerInit = (
     }>
 ) => {
     return (ctx: Parameters<API.ConfigureCallback>[0]) => {
+        const FBArrayToIterator = ctx.shared.FBArrayToIterator
+        const FReflect = ctx.shared.FReflect
+        const FBWeakMapHas = ctx.shared.FBWeakMapHas
+        const FBWeakMapSet = ctx.shared.FBWeakMapSet
+        const FBWeakMapGet = ctx.shared.FBWeakMapGet
+        const FBSetAdd = ctx.shared.FBSetAdd
+        const FBSetHas = ctx.shared.FBSetHas
+        const FBWeakSetAdd = ctx.shared.FBWeakSetAdd
+        const FBWeakSetHas = ctx.shared.FBWeakSetHas
+        const FWeakMap = ctx.shared.FWeakMap
+        const FWeakSet = ctx.shared.FWeakSet
+        const FCreateEmpty = ctx.shared.FCreateEmpty
+
         const allowOnlyCallIfFunction = (fn: any) => {
-            if (typeof fn === 'function' && !banned.has(fn)) {
-                allowOnlyCalled.add(fn)
+            if (typeof fn === 'function' && !FBSetHas(banned, fn)) {
+                FBSetAdd(allowOnlyCalled, fn)
             }
         }
     
         const getMeta = (obj: any) => {
-            const descriptors = Object.create(null)
+            const descriptors = FCreateEmpty({})
     
-            for (let propertyKey of Reflect.ownKeys(obj)) {
-                const desc = Reflect.getOwnPropertyDescriptor(obj, propertyKey)!
+            for (let propertyKey of FBArrayToIterator(FReflect.ownKeys(obj))) {
+                const desc = FReflect.getOwnPropertyDescriptor(obj, propertyKey)!
                 descriptors[propertyKey] = desc
     
                 allowOnlyCallIfFunction(desc.value)
@@ -400,8 +406,8 @@ const getServerInit = (
                 allowOnlyCallIfFunction(desc.set)
             }
     
-            const prototype = Reflect.getPrototypeOf(obj)
-            const isExtensible = Reflect.isExtensible(obj)
+            const prototype = FReflect.getPrototypeOf(obj)
+            const isExtensible = FReflect.isExtensible(obj)
     
             return {
                 descriptors,
@@ -410,28 +416,29 @@ const getServerInit = (
             }
         }
 
+        // TODO: FIXME: FIX PROTOTYPE POLLUTION
         // anything other
-        const mapped = new WeakSet([...banned, ...allowOnlyCalled] as any)
+        const mapped = new FWeakSet([...banned, ...allowOnlyCalled] as any)
     
         const map = (value: any, key = '') => {
             if (value == null || (typeof value !== 'function' && typeof value !== 'object')) {
                 return
             }
     
-            if (mapped.has(value)) {
+            if (FBWeakSetHas(mapped, value)) {
                 return
             }
     
-            mapped.add(value)
+            FBWeakSetAdd(mapped, value)
     
             const meta = getMeta(value)
     
-            preservedMeta.set(value, meta)
+            FBWeakMapSet(preservedMeta, value, meta)
     
-            map(Reflect.getPrototypeOf(value))
+            map(FReflect.getPrototypeOf(value))
     
-            for (let key of Reflect.ownKeys(value)) {
-                var desc = Reflect.getOwnPropertyDescriptor(value, key)!
+            for (let key of FReflect.ownKeys(value)) {
+                var desc = FReflect.getOwnPropertyDescriptor(value, key)!
     
                 map(desc.value)
                 map(desc.get)
@@ -448,7 +455,7 @@ const getServerInit = (
         const NamedNodeMap = window.NamedNodeMap
         const DOMTokenList = window.DOMTokenList
         const CharacterData = window.CharacterData
-        const TypedArray = Reflect.getPrototypeOf(Uint8Array)
+        const TypedArray = FReflect.getPrototypeOf(Uint8Array)
 
         function allowDirectPass (obj: any) {
             return obj instanceof (TypedArray as any)
@@ -461,26 +468,26 @@ const getServerInit = (
                 || Array.isArray(obj) // don't care, just pass the array
         }
 
-        const accessTokenMap = new WeakMap<any, {
+        const accessTokenMap = new FWeakMap<any, {
             descriptors: any,
             prototype: any,
             isExtensible: boolean
         }>()
     
         ctx.registerMetaCallback((obj) => {
-            if (!mapped.has(obj)) {
+            if (!FBWeakSetHas(mapped, obj)) {
                 if (!allowDirectPass(obj)) {
                     map(obj)
                 }
     
-                mapped.add(obj)
+                FBWeakSetAdd(mapped, obj)
             }
     
-            if (preservedMeta.has(obj)) {
-                const token = Object.create(null)
-                accessTokenMap.set(token, preservedMeta.get(obj)!)
+            if (FBWeakMapHas(preservedMeta, obj)) {
+                const token = FCreateEmpty({})
+                FBWeakMapSet(accessTokenMap, token, FBWeakMapGet(preservedMeta, obj)!)
 
-                mapped.add(token);
+                FBWeakSetAdd(mapped, token);
 
                 const vWrapper = ctx.toWrapper(token, ctx.world)
     
@@ -495,17 +502,16 @@ const getServerInit = (
             const { success: success2, value: key } = ctx.unwrap(keyWrapper)
     
             if (!success1 || !success2 || !accessTokenMap.has(token)) {
-                debugger
                 return {
                     success: false,
                     value: ctx.toWrapper('wtf', ctx.world)
                 }
             }
     
-            if (key in accessTokenMap.get(token)!.descriptors) {
+            if (key in FBWeakMapGet(accessTokenMap, token)!.descriptors) {
                 return {
                     success: true,
-                    value: ctx.toRecord(accessTokenMap.get(token)!.descriptors[key], ctx.world)
+                    value: ctx.toRecord(FBWeakMapGet(accessTokenMap, token)!.descriptors[key], ctx.world)
                 }
             } else {
                 return {
@@ -518,8 +524,7 @@ const getServerInit = (
         ctx.registerCustomTrap('getOwnKeys', function (tokenWrapper) {
             const { success: success1, value: token } = ctx.unwrap(tokenWrapper)
     
-            if (!success1 || !accessTokenMap.has(token)) {
-                debugger
+            if (!success1 || !FBWeakMapHas(accessTokenMap, token)) {
                 return {
                     success: false,
                     value: ctx.toWrapper('wtf', ctx.world)
@@ -528,15 +533,14 @@ const getServerInit = (
     
             return {
                 success: true,
-                value: ctx.toRecord(Reflect.ownKeys(accessTokenMap.get(token)!.descriptors), ctx.world)
+                value: ctx.toRecord(Reflect.ownKeys(FBWeakMapGet(accessTokenMap, token)!.descriptors), ctx.world)
             }
         })
     
         ctx.registerCustomTrap('getProto', function (tokenWrapper) {
             const { success: success1, value: token } = ctx.unwrap(tokenWrapper)
     
-            if (!success1 || !accessTokenMap.has(token)) {
-                debugger
+            if (!success1 || !FBWeakMapHas(accessTokenMap, token)) {
                 return {
                     success: false,
                     value: ctx.toWrapper('wtf', ctx.world)
@@ -545,14 +549,14 @@ const getServerInit = (
     
             return {
                 success: true,
-                value: ctx.toWrapper(accessTokenMap.get(token)!.prototype, ctx.world)
+                value: ctx.toWrapper(FBWeakMapGet(accessTokenMap, token)!.prototype, ctx.world)
             }
         })
     
         ctx.registerCustomTrap('getIsExt', function (tokenWrapper) {
             const { success: success1, value: token } = ctx.unwrap(tokenWrapper)
     
-            if (!success1 || !accessTokenMap.has(token)) {
+            if (!success1 || !FBWeakMapHas(accessTokenMap, token)) {
                 return {
                     success: false,
                     value: ctx.toWrapper('wtf', ctx.world)
@@ -561,7 +565,7 @@ const getServerInit = (
     
             return {
                 success: true,
-                value: ctx.toWrapper(accessTokenMap.get(token)!.isExtensible, ctx.world)
+                value: ctx.toWrapper(FBWeakMapGet(accessTokenMap, token)!.isExtensible, ctx.world)
             }
         })
     }
@@ -599,6 +603,10 @@ const getClientInit = (
     }>
 ) => {
     return (ctx: Parameters<API.ConfigureCallback>[0]) => {
+        const FBArrayToIterator = ctx.shared.FBArrayToIterator
+        const FBArrayMap = ctx.shared.FBArrayMap
+        const FReflect = ctx.shared.FReflect
+        const FCreateEmpty = ctx.shared.FCreateEmpty
 
         ctx.registerCustomProxyInit((
             token: Token,
@@ -609,16 +617,18 @@ const getClientInit = (
             if (!token.meta.remapToken) return
             const remapToken = ctx.unwrap(token.meta.remapToken).value
 
-            const fakeTarget = token.type === 'object' ? Object.create(null) : Object.setPrototypeOf(function () {}, null)
+            const fakeTarget = token.type === 'object' ? FCreateEmpty({}) : function () {}
+
+            FReflect.setPrototypeOf(fakeTarget, null)
 
             let prototypeInitialized = false
             let fullInitialized = false
-            const keyRecord = Object.create(null)
+            const keyRecord = FCreateEmpty({})
 
             const callUnwrapped = (fn: any, ...args: any[]) => {
                 return ctx.unwrap(
                     fn(
-                        ...args.map(i => ctx.toWrapper(i, ctx.world))
+                        ...FBArrayToIterator(FBArrayMap(args, (i: any) => ctx.toWrapper(i, ctx.world)))
                     ).value
                 ).value
             }
@@ -628,7 +638,7 @@ const getClientInit = (
 
                 const proto = callUnwrapped(token.owner.getCustomTrap('getProto'), remapToken)
 
-                Reflect.setPrototypeOf(fakeTarget, proto)
+                FReflect.setPrototypeOf(fakeTarget, proto)
 
                 prototypeInitialized = true
             }
@@ -643,7 +653,7 @@ const getClientInit = (
                 const desc = callUnwrapped(token.owner.getCustomTrap('getDesc'), remapToken, key)
 
                 if (desc != null) {
-                    Reflect.defineProperty(
+                    FReflect.defineProperty(
                         fakeTarget,
                         key,
                         callUnwrapped(token.owner.getCustomTrap('getDesc'), remapToken, key)
@@ -665,7 +675,7 @@ const getClientInit = (
                 initPrototypeIfRequired()
 
                 if (!callUnwrapped(token.owner.getCustomTrap('getIsExt'), remapToken)) {
-                    Reflect.preventExtensions(fakeTarget)
+                    FReflect.preventExtensions(fakeTarget)
                 }
 
                 fullInitialized = true
@@ -686,22 +696,22 @@ const getClientInit = (
             }
 
             const proxy = new Proxy(fakeTarget, {
-                get: createLazyPropHandler(Reflect.get),
-                set: createLazyPropHandler(Reflect.set),
-                has: createLazyPropHandler(Reflect.has),
-                getOwnPropertyDescriptor: createLazyPropHandler(Reflect.getOwnPropertyDescriptor),
-                deleteProperty: createLazyPropHandler(Reflect.deleteProperty),
-                defineProperty: createLazyPropHandler(Reflect.defineProperty),
+                get: createLazyPropHandler(FReflect.get),
+                set: createLazyPropHandler(FReflect.set),
+                has: createLazyPropHandler(FReflect.has),
+                getOwnPropertyDescriptor: createLazyPropHandler(FReflect.getOwnPropertyDescriptor),
+                deleteProperty: createLazyPropHandler(FReflect.deleteProperty),
+                defineProperty: createLazyPropHandler(FReflect.defineProperty),
 
-                getPrototypeOf: createLazyHandler(Reflect.getPrototypeOf),
-                setPrototypeOf: createLazyHandler(Reflect.setPrototypeOf),
-                ownKeys: createLazyHandler(Reflect.ownKeys),
+                getPrototypeOf: createLazyHandler(FReflect.getPrototypeOf),
+                setPrototypeOf: createLazyHandler(FReflect.setPrototypeOf),
+                ownKeys: createLazyHandler(FReflect.ownKeys),
 
                 apply: preMappedHandlers.apply,
                 construct: preMappedHandlers.construct,
 
-                preventExtensions: createLazyHandler(Reflect.preventExtensions),
-                isExtensible: createLazyHandler(Reflect.isExtensible),
+                preventExtensions: createLazyHandler(FReflect.preventExtensions),
+                isExtensible: createLazyHandler(FReflect.isExtensible),
             })
 
             return proxy
@@ -917,6 +927,7 @@ export const createRealm = async () => {
 
     // everything other
     for (let key of Reflect.ownKeys(window)) {
+        // Don't remove configurable check!!!, define location on window cause chrome to navigation even it is not configurable
         if (key !== 'eval' && !preservedWindowKeys.includes(key) && Reflect.getOwnPropertyDescriptor(window, key)!.configurable) {
             Reflect.defineProperty(sandbox, key, Reflect.getOwnPropertyDescriptor(window, key)!)
         }
