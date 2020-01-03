@@ -1,6 +1,6 @@
 import {
     IShared,
-    DEV
+    flags
 } from './sharedFactory'
 
 import {
@@ -13,11 +13,11 @@ import {
 
 const SES = {
     get DEV () {
-        return DEV
+        return flags.DEV
     },
 
     set DEV (value) {
-        (DEV as any) = value
+        flags.DEV = value
     }
 }
 export function createProxyFactory(
@@ -165,7 +165,8 @@ export function createProxyFactory(
                 if (desc === undefined || 'value' in desc) {
                     return defaultHandlers.set(target, key, value, receiver)
                 } else if (desc.set) {
-                    return Reflect.apply(desc.set, receiver, [value])
+                    Reflect.apply(desc.set, receiver, [value])
+                    return true
                 } else {
                     return false
                 }
@@ -192,6 +193,17 @@ export function createProxyFactory(
                 } catch (err) {
                     throw err
                 }
+            },
+            // this need to be specially handled
+            defineProperty(target, key, desc) {
+                const success = defaultHandlers.defineProperty(target, key, desc)
+
+                // satisfy the invariant limit if define is successful and descriptor is not configurable
+                if (success && !desc.configurable) {
+                    Reflect.defineProperty(fakeTarget, key, desc)
+                }
+
+                return success
             },
             // this will crash if not handled correctly, so it also need to be specially handled
             isExtensible(target) {

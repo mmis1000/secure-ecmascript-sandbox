@@ -3,16 +3,17 @@
 import SES from '../lib/sandbox.js'
 
 
-const remote = /** @type {any} */(window).remote = SES.fastInit(window)
+async function main() {
+    const remote = /** @type {any} */(window).remote = await SES.fastInit(window)
 
-console.log(remote.document.title)
-remote.eval(`window.document.title = 'test2'`)
-console.log(remote.document.title)
+    console.log(remote.document.title)
+    remote.eval(`window.document.title = 'test2'`)
+    console.log(remote.document.title)
 
-remote.console = console
-remote.main = window
-remote.mainDoc = document
-remote.eval(`
+    remote.console = console
+    remote.main = window
+    remote.mainDoc = document
+    remote.eval(`
     const el = mainDoc.createElement('div')
     el.textContent = 123
     mainDoc.body.appendChild(el)
@@ -85,15 +86,18 @@ remote.eval(`
     debugger
 `)
 
-console.log(Object.keys(remote))
+    console.log(Object.keys(remote))
 
-console.log(remote.Array.isArray(new remote.Array()))
-console.log(Array.isArray(new remote.Array()))
-console.log(remote.Array.isArray(new Array()))
+    console.log(remote.Array.isArray(new remote.Array()))
+    console.log(Array.isArray(new remote.Array()))
+    console.log(remote.Array.isArray(new Array()))
 
-try {
-    console.log(remote.badObject.err)
-} catch (err) {
-    // this will be proxy
-    console.log(err)
+    try {
+        console.log(remote.badObject.err)
+    } catch (err) {
+        // this will be proxy
+        console.log(err)
+    }
 }
+
+main()

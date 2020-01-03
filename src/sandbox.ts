@@ -1,6 +1,6 @@
 import {
     makeShared,
-    DEV
+    flags
 } from './sharedFactory'
 
 import {
@@ -26,11 +26,11 @@ const SES = {
     fastInit,
     fastInitNode,
     get DEV () {
-        return DEV
+        return flags.DEV
     },
 
     set DEV (value) {
-        (DEV as any) = value
+        flags.DEV = value
     }
 }
 
@@ -665,16 +665,27 @@ export function createScript(obj: any) {
     return text
 }
 
-/* istanbul ignore next */ export function fastInit(root: any, configureCallback ?: API.ConfigureCallback, remoteConfigureCallback ?: API.ConfigureCallback) {
+/* istanbul ignore next */ export async function fastInit(
+    root: any,
+    configureCallback ?: API.ConfigureCallback,
+    remoteConfigureCallback ?: API.ConfigureCallback | string,
+    remoteRootExpr = "globalThis"
+) {
+    let iframe = document.createElement('iframe')
+
+    iframe.src = 'about:blank'
+    iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
+    iframe.style.display = 'none'
+
+    document.body.append(iframe)
+
+    await Promise.race([
+        new Promise(resolve => iframe.onload = resolve),
+        new Promise(resolve => setTimeout(resolve, 100))
+    ])
 
     const createRoot = init(configureCallback)
     const server = createRoot(root)
-
-    let iframe = document.createElement('iframe')
-    iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
-    iframe.style.display = 'none';
-
-    document.body.append(iframe)
 
     let realm = (iframe.contentWindow as any).eval(`
         "use strict";
@@ -682,7 +693,7 @@ export function createScript(obj: any) {
         const SES = ${createScript(SES)}
 
         const createRoot = SES.init(${remoteConfigureCallback ? remoteConfigureCallback.toString() : ''})
-        const server = createRoot(globalThis)
+        const server = createRoot(${remoteRootExpr})
         server
     `)
 
@@ -700,7 +711,7 @@ export function createScript(obj: any) {
     return remote
 }
 
-export function fastInitNode(root: any, configureCallback ?: API.ConfigureCallback, remoteConfigureCallback ?: API.ConfigureCallback) {
+export function fastInitNode(root: any, configureCallback ?: API.ConfigureCallback, remoteConfigureCallback ?: API.ConfigureCallback | string) {
     const createRoot = init(configureCallback)
     const server = createRoot(root)
 

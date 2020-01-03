@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    The realm
+    <div id="app">
+        <p>{{ message }}</p>
+        <input v-model="message">
+        <button v-on:click="add">Add</button>
+        <button v-on:click="remove">remove</button>
+        <div v-for="item in list" v-bind:key="item.id">
+            <input v-model="item.value">
+            {{ item.value }}
+        </div>
+    </div>
+    <script type="module" src="./test.js"></script>
+</body>
+</html>

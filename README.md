@@ -140,6 +140,26 @@ S: sides that hold shadow object
 5. R - The service perform operation on real object, return the response to shadow side
     1. R - If the response is an object, use the shadow object creation process described above.
 
+### Different types of objects that require additional handling in order to make sandbox (looks) transparent
+
+1. Intrinsic Objects
+   1. e.g. `Map`, `Proxy`
+   2. Remap with a fixed key e.g. Proxy <-> 'Proxy'
+   3. Prevent modification against it
+2. Intrinsic method/getter/setter of intrinsic classes that relies on `this`'s internal slot
+   1. e.g. `Map.prototype.get`, `TypedArray.prototype.slice`
+   2. Wrap the inner realm's method and re-dispatch if `this` is shadow object
+      1. or it simply not work because `new Proxy` does not have the proper internal slot
+   3. Prevent modification against it
+3. Live objects
+   1. e.g. `new Array`, `body.children`, `body.style`
+   2. Just forward
+4. Any other object/function
+   1. Forward with a fixed property map
+   2. Essentially make it non live and stop all modification once and for all
+5. Non object/function
+   1. Forward as is
+
 # Security Warning
 
 ## Edge

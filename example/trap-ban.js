@@ -2,23 +2,24 @@
 
 import SES from '../lib/sandbox.js'
 
-const remote = /** @type {any} */(window).remote = SES.fastInit(window, (ctx) => {
-    ctx.registerTrapHooks({
-        apply (target, thisArg, argArray) {
-            if (ctx.unwrap(target).value === fetch) {
-                return {
-                    success: false,
-                    value: ctx.toWrapper(new Error('calling not allowed'), ctx.world)
+async function main() {
+    const remote = /** @type {any} */(window).remote = await SES.fastInit(window, (ctx) => {
+        ctx.registerTrapHooks({
+            apply(target, thisArg, argArray) {
+                if (ctx.unwrap(target).value === fetch) {
+                    return {
+                        success: false,
+                        value: ctx.toWrapper(new Error('calling not allowed'), ctx.world)
+                    }
                 }
             }
-        }
+        })
     })
-})
 
-remote.main = window
-remote.console = console
+    remote.main = window
+    remote.console = console
 
-remote.eval(`
+    remote.eval(`
     const fetch = main.fetch
     console.log('store pointer is fine')
 
@@ -38,3 +39,6 @@ remote.eval(`
         console.error('call it will crash', err)
     }
 `)
+}
+
+main()
