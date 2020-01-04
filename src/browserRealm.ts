@@ -376,6 +376,7 @@ const getServerInit = (
 ) => {
     return (ctx: Parameters<API.ConfigureCallback>[0]) => {
         const FBArrayToIterator = ctx.shared.FBArrayToIterator
+        const FBSetToIterator = ctx.shared.FBSetToIterator
         const FReflect = ctx.shared.FReflect
         const FBWeakMapHas = ctx.shared.FBWeakMapHas
         const FBWeakMapSet = ctx.shared.FBWeakMapSet
@@ -416,9 +417,8 @@ const getServerInit = (
             }
         }
 
-        // TODO: FIXME: FIX PROTOTYPE POLLUTION
         // anything other
-        const mapped = new FWeakSet([...banned, ...allowOnlyCalled] as any)
+        const mapped = new FWeakSet(FBArrayToIterator([...FBSetToIterator(banned), ...FBSetToIterator(allowOnlyCalled)]))
     
         const map = (value: any, key = '') => {
             if (value == null || (typeof value !== 'function' && typeof value !== 'object')) {

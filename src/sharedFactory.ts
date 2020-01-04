@@ -120,6 +120,24 @@ export function makeShared() {
         return value
     }
 
+    const FSetValues = Set.prototype.values
+    const FSetIteratorNext = (FReflect.getPrototypeOf((new Set).values()) as any).next 
+    const FBSetToIterator = (set: Set<any>) => {
+        const iterator = FReflect.apply(FSetValues, set, [])
+
+        const next = () => FReflect.apply(FSetIteratorNext, iterator, [])
+
+        const value: {
+            next: typeof next,
+            [Symbol.iterator]: any
+        } = {
+            next,
+            [SymbolIterator]: function () { return this }
+        } as any
+
+        return value
+    }
+
     const FConsoleError = console.error
 
     /**
@@ -257,6 +275,7 @@ export function makeShared() {
 
         FBArrayMap,
         FBArrayToIterator,
+        FBSetToIterator,
         FReflect,
         FCreateEmpty,
         FFreeze,
