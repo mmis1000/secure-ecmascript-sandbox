@@ -62,7 +62,7 @@ export function makeShared() {
     const FBWeakSetDelete: (self: WeakSet<any>, ...args: any[]) => any  = FCall.bind(FWeakSetDelete)
 
     const FArrayMap = Array.prototype.map
-    const FBArrayMap = FCall.bind(FArrayMap)
+    const FBArrayMap: <T, U>(arg: T[], cb: (v: T, i: number) => U)=>U[] = FCall.bind(FArrayMap) as any
 
     const FReflect: typeof Reflect = {
         // ...Reflect,
@@ -92,7 +92,7 @@ export function makeShared() {
 
     const SymbolIterator: (typeof Symbol)['iterator'] = Symbol.iterator
 
-    const FBArrayToIterator = (arr: any[]) => {
+    const FBArrayToIterator: <T>(arr: T[])=> Iterable<T> = (arr: any[]) => {
         let index = 0
         const next = () => {
             if (index >= arr.length) {
@@ -188,7 +188,7 @@ export function makeShared() {
                 throw new FError('tainted object!!!')
             }
 
-            // the object may use timing attack to by pass get prototype check
+            // the object may use timing attack to bypass get prototype check
             // because it is not frozen at that time
             if (FGetPrototypeOf(unsafeObj) !== null) {
                 throw new FError('PROTOTYPE LEAKING!!!')
@@ -249,6 +249,45 @@ export function makeShared() {
     // prevent arguments.caller
     dropPrototypeRecursive(safeGetProp)
 
+    /** 
+     * expose `this` to getter/setter on these prototypes should be safe, 
+     * because they only use internal slot of 'this'
+     * input/output still need to be wrapped
+     */
+    const whitelistedPrototypes: any[] = [
+        Date.prototype,
+
+        Promise.prototype,
+
+        Map.prototype,
+        Set.prototype,
+
+        WeakMap.prototype,
+        WeakSet.prototype,
+
+        ArrayBuffer.prototype,
+        SharedArrayBuffer.prototype,
+
+        (Reflect.getPrototypeOf(Int8Array) as any).prototype, // TypedArray
+
+        Int8Array.prototype,
+        Int16Array.prototype,
+        Int32Array.prototype,
+
+        Uint8Array.prototype,
+        Uint8ClampedArray.prototype,
+        Uint16Array.prototype,
+        Uint32Array.prototype,
+
+        DataView.prototype,
+
+        RegExp.prototype,
+
+        FReflect.getPrototypeOf(FReflect.getPrototypeOf((function * () {})())), // generator prototype
+        FReflect.getPrototypeOf(new Map().values()), // map iterator
+        FReflect.getPrototypeOf(new Set().values()), // set iterator
+    ]
+
     const shared = {
         FProxy,
         FError,
@@ -284,7 +323,8 @@ export function makeShared() {
         FConsoleError,
         dropPrototypeRecursive,
         safeGetProp,
-        getNodeName
+        getNodeName,
+        whitelistedPrototypes
     }
 
     FSetPrototypeOf(shared, null)

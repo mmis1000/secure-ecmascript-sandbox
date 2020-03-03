@@ -47,7 +47,12 @@ export type Response<T, U> = ResponseSuccess<T> | ResponseFailed<U>
 export interface Token {
     owner: World,
     type: 'function' | 'object',
-    meta: Record<string, any>
+    meta: Record<string, any>,
+    /**
+     * This method expose `this` to given function due to some methods actually relies on internal slot,
+     * So they do not work across realm
+     */
+    REALLY_DANGEROUS_INVOKE_WITH_RAW_THIS: (self: (...args: any[]) => any, ...args: ValueWrapper[]) => Response<ValueWrapper, ValueWrapper>
 }
 
 export type ProxyHandlers = Omit<Required<ProxyHandler<any>>, 'enumerate'>
@@ -176,6 +181,8 @@ export namespace API {
      */
     export type TrapHooks = {
         [K in keyof Traps]+?: (...args: BeArray<Parameters<Traps[K]>>) => (Response<ValueWrapper, ValueWrapper> | undefined)
+    } & {
+        dangerousApply? (fn: (...arg: any[]) => any, self: any, args: ValueWrapper[]): (Response<ValueWrapper, ValueWrapper> | undefined)
     }
 
     export interface RegisterMetaCallback {

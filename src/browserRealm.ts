@@ -230,37 +230,37 @@ const getSharedInit = (
             }
         }
     
-        // preserve prototype methods only when required
-        for (let item of FBArrayToIterator(allowPrototypeMethods)) {
-            let key: string
-            let value: any
-            if (typeof item === 'string') {
-                key = item
-                value = (globalThis as any)[key]
-            } else {
-                key = item[0]
-                value = item[1]
-            }
+        // // preserve prototype methods only when required
+        // for (let item of FBArrayToIterator(allowPrototypeMethods)) {
+        //     let key: string
+        //     let value: any
+        //     if (typeof item === 'string') {
+        //         key = item
+        //         value = (globalThis as any)[key]
+        //     } else {
+        //         key = item[0]
+        //         value = item[1]
+        //     }
     
-            if (value != null && (typeof value === 'object' || typeof value === 'function')) {
-                if (value.prototype) {
-                    FBSetAdd(preservedKeys, value.prototype)
+        //     if (value != null && (typeof value === 'object' || typeof value === 'function')) {
+        //         if (value.prototype) {
+        //             FBSetAdd(preservedKeys, value.prototype)
 
-                    const descriptors = FCreateEmpty({})
+        //             const descriptors = FCreateEmpty({})
     
-                    for (let propertyKey of FBArrayToIterator((FReflect.ownKeys(value.prototype)))) {
-                        const desc = FReflect.getOwnPropertyDescriptor(value.prototype, propertyKey)!
-                        descriptors[propertyKey] = desc
+        //             for (let propertyKey of FBArrayToIterator((FReflect.ownKeys(value.prototype)))) {
+        //                 const desc = FReflect.getOwnPropertyDescriptor(value.prototype, propertyKey)!
+        //                 descriptors[propertyKey] = desc
     
-                        allowOnlyCallIfFunction(desc.value)
-                        allowOnlyCallIfFunction(desc.get)
-                        allowOnlyCallIfFunction(desc.set)
-                    }
+        //                 allowOnlyCallIfFunction(desc.value)
+        //                 allowOnlyCallIfFunction(desc.get)
+        //                 allowOnlyCallIfFunction(desc.set)
+        //             }
     
-                    FBWeakMapSet(preservedMeta, value.prototype, getMeta(value.prototype))
-                }
-            }
-        }
+        //             FBWeakMapSet(preservedMeta, value.prototype, getMeta(value.prototype))
+        //         }
+        //     }
+        // }
 
         // specially handle document
         FBMapSet(idToObject, 'document', document)
@@ -788,8 +788,8 @@ export const createRealm = async () => {
                 isShadowTarget = isShadowTargetContainer.value;
                 documentMeta = documentMetaContainer.value;
             }
-        })()
-    , `
+        })(),
+        `
         (() => {
             const ESGlobal = (${getESGlobal.toString()})()
             const allowPrototypeMethods = (${getAllowPrototypeMethods.toString()})()
@@ -835,60 +835,63 @@ export const createRealm = async () => {
                 window.isShadowTarget = isShadowTargetContainer.value
             }
         })()
-    `, 'new Proxy(eval, {})')
+        `,
+        'new Proxy(eval, {})',
+        { fixInternalSlot: true }
+    )
     const sandbox = sandboxEval('new Proxy(window, {})')
 
-    const receiver = sandboxEval(`
-        'use strict';
+    // const receiver = sandboxEval(`
+    //     'use strict';
 
-        const isShadowTarget = window.isShadowTarget;
-        delete window.isShadowTarget;
+    //     const isShadowTarget = window.isShadowTarget;
+    //     delete window.isShadowTarget;
 
-        (${((proto: any, descriptors: any) => {
-            for (let key of Reflect.ownKeys(descriptors)) {
-                const original = Reflect.getOwnPropertyDescriptor(proto, key)!
+    //     (${((proto: any, descriptors: any) => {
+    //         for (let key of Reflect.ownKeys(descriptors)) {
+    //             const original = Reflect.getOwnPropertyDescriptor(proto, key)!
 
-                const shadow = descriptors[key]
-                const remap = (fn: any, shadowFn: any) => {
-                    if (typeof fn !== 'function') return fn
+    //             const shadow = descriptors[key]
+    //             const remap = (fn: any, shadowFn: any) => {
+    //                 if (typeof fn !== 'function') return fn
 
-                    const proxy = new Proxy(fn, {
-                        apply (target, thisArg, args) {
-                            if (isShadowTarget(thisArg)) {
-                                return Reflect.apply(shadowFn, thisArg, args)
-                            } else {
-                                return Reflect.apply(fn, thisArg, args)
-                            }
-                        }
-                    })
+    //                 const proxy = new Proxy(fn, {
+    //                     apply (target, thisArg, args) {
+    //                         if (isShadowTarget(thisArg)) {
+    //                             return Reflect.apply(shadowFn, thisArg, args)
+    //                         } else {
+    //                             return Reflect.apply(fn, thisArg, args)
+    //                         }
+    //                     }
+    //                 })
 
-                    return proxy
-                }
+    //                 return proxy
+    //             }
 
-                let remappedDesc
+    //             let remappedDesc
 
-                // debugger
-                if ('value' in original) {
-                    remappedDesc = {
-                        ...original,
-                        value: original.value && remap(original.value, shadow.value)
-                    }
-                } else {
-                    remappedDesc = {
-                        ...original,
-                        get: original.get && remap(original.get, shadow.get),
-                        set: original.set && remap(original.set, shadow.set)
-                    }
-                }
+    //             // debugger
+    //             if ('value' in original) {
+    //                 remappedDesc = {
+    //                     ...original,
+    //                     value: original.value && remap(original.value, shadow.value)
+    //                 }
+    //             } else {
+    //                 remappedDesc = {
+    //                     ...original,
+    //                     get: original.get && remap(original.get, shadow.get),
+    //                     set: original.set && remap(original.set, shadow.set)
+    //                 }
+    //             }
 
-                Reflect.defineProperty(proto, key, remappedDesc)
-            }
-        }).toString()})
-    `)
+    //             Reflect.defineProperty(proto, key, remappedDesc)
+    //         }
+    //     }).toString()})
+    // `)
 
-    for (let key of preservedKeys) {
-        receiver(key, preservedMeta.get(key)!.descriptors)
-    }
+    // for (let key of preservedKeys) {
+    //     receiver(key, preservedMeta.get(key)!.descriptors)
+    // }
 
     const documentReceiver = sandboxEval(`
         'use strict';

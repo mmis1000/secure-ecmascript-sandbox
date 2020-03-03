@@ -13,7 +13,7 @@ async function main () {
     test[0] = 5
     sandbox.test = test
 
-    const wait = sandboxEval(`
+    const app = await sandboxEval(`
         debugger;
         console.log("hi");
         console.log(test[0]);
@@ -27,7 +27,7 @@ async function main () {
 
         async function runVue () {
             const { default: Vue } = await import('https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.esm.browser.js')
-            window.app = new Vue({
+            return new Vue({
                 el: '#app',
                 data: {
                     message: 'Hello Vue.js!',
@@ -40,17 +40,12 @@ async function main () {
             })
         }
 
-        (function (cb) {
-            runVue().then(cb)
-        })
+        runVue()
     `)
 
-    //the await on returned promise not work in outer realm because we did not remap the promise method in outer realm
-    wait(() => {
-        sandbox.app.list.push({ id: 'outSide', value: 'objectFromOutSide' })
-    
-        console.log(sandbox.test[0], sandbox.test.hello)
-    })
+    app.list.push({ id: 'outSide', value: 'objectFromOutSide' })
+
+    console.log(sandbox.test[0], sandbox.test.hello)
 }
 
 main()

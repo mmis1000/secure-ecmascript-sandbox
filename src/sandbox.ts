@@ -68,7 +68,7 @@ export function init(configureCallback ?: API.ConfigureCallback) {
     const dropPrototypeRecursive = shared.dropPrototypeRecursive
     const safeGetProp = shared.safeGetProp
 
-    return function createServer<T>(root: T) {
+    return function createServer<T>(root: T, options: { fixInternalSlot: boolean} = { fixInternalSlot: false}) {
         const successVal = <T>(v: T) => ({
             success: true as const,
             value: v
@@ -181,6 +181,38 @@ export function init(configureCallback ?: API.ConfigureCallback) {
             // hooks end: attach metadata
 
             token.meta = meta
+
+            token.REALLY_DANGEROUS_INVOKE_WITH_RAW_THIS = function (self, ...argsWrapped) {
+                try {
+                    for (let i = 0; i < trapHooks.length; i++) {
+                        var hook = trapHooks[i]
+                        if (hook.dangerousApply) {
+                            const res = hook.dangerousApply(self, obj, argsWrapped)
+                            if (res != null) {
+                                return res
+                            }
+                        }
+                    }
+                } catch (err) {
+                    return failVal(toWrapper(err, currentWorld))
+                }
+
+                try {
+                    const argsRes = FBArrayMap(argsWrapped, i => unwrap(i))
+                    for (let i of FBArrayToIterator(argsRes)) {
+                        if (!i.success) {
+                            throw new Error('bad input')
+                        }
+                    }
+                    const args = FBArrayMap(argsRes, i => i.value)
+                    const res = FReflect.apply(self, obj, args)
+                    return successVal(toWrapper(res, currentWorld))
+                } catch (err) {
+                    return failVal(toWrapper(err, currentWorld))
+                }
+            }
+
+            dropPrototypeRecursive(token.REALLY_DANGEROUS_INVOKE_WITH_RAW_THIS)
 
             FBWeakMapSet(realToToken, obj, token)
             FBWeakMapSet(tokenToReal, token, obj)
@@ -301,7 +333,8 @@ export function init(configureCallback ?: API.ConfigureCallback) {
             target.value = FCreateEmpty({})
 
             for (let key of FBArrayToIterator(keys)) {
-                target.value[key] = toWrapper(obj[key], world)
+                // symbol bug
+                target.value[key as any] = toWrapper(obj[key], world)
             }
 
             return target
@@ -331,7 +364,8 @@ export function init(configureCallback ?: API.ConfigureCallback) {
                     const value = safeGetProp(unsafeObj, 'value') as { [key: string]: ValueWrapper }
 
                     for (let key of FBArrayToIterator(FReflect.ownKeys(value))) {
-                        const res = unwrap(value[key])
+                        // symbol bug
+                        const res = unwrap(value[key as any])
                         if (res.success) {
                             result[key] = res.value
                         } else {
@@ -618,6 +652,91 @@ export function init(configureCallback ?: API.ConfigureCallback) {
             })
         }
 
+        function wrapMethodAndInvokeThisAsRaw (func: (...any: any[]) => any) {
+            var wrapped = new Proxy(func, {
+                apply (target, self, args) {
+                    if (!FBWeakMapHas(proxyToToken, self) && !FBWeakMapHas(redirectedToToken, self)) {
+                        return FReflect.apply(func, self, args)
+                    } else {
+                        let token!: Token
+                        if (FBWeakMapHas(proxyToToken, self)) {
+                            token = FBWeakMapGet(proxyToToken, self)
+                        } else {
+                            token = FBWeakMapGet(redirectedToToken, self)
+                        }
+
+                        const wrappedArgs = FBArrayMap(args, (i) => toWrapper(i, currentWorld))
+
+                        try {
+                            const res = token.REALLY_DANGEROUS_INVOKE_WITH_RAW_THIS(func, ...FBArrayToIterator(wrappedArgs))
+                            
+
+                            if (res.success) {
+                                let { success, value } = unwrap(res.value)
+                                if (success) {
+                                    return value
+                                } else {
+                                    throw value
+                                }
+                            } else {
+                                let { success, value } = unwrap(res.value)
+                                if (success) {
+                                    return value
+                                } else {
+                                    throw value
+                                }
+                            }
+                        } catch (err) {
+                            let message = 'internal crash'
+                            try {
+                                message = err.message
+                            } finally {
+                                throw new Error(message)
+                            }
+                        }
+                    }
+                }
+            })
+
+            return wrapped
+        }
+
+        if (options.fixInternalSlot) {
+            for (let obj of FBArrayToIterator(shared.whitelistedPrototypes)) {
+                for (let key of FBArrayToIterator(FReflect.ownKeys(obj))) {
+                    const desc = FReflect.getOwnPropertyDescriptor(obj, key)
+                    if (!desc) continue
+
+                    FReflect.setPrototypeOf(desc, null)
+
+                    if (FReflect.getOwnPropertyDescriptor(desc, 'value')) {
+                        // has value
+                        if (typeof desc.value === 'function') {
+                            FReflect.defineProperty(obj, key, {
+                                ...desc,
+                                value: wrapMethodAndInvokeThisAsRaw(desc.value)
+                            })
+                        }
+
+                    } else {
+                        // has getter/setter
+                        if (typeof desc.set === 'function') {
+                            FReflect.defineProperty(obj, key, {
+                                ...desc,
+                                set: wrapMethodAndInvokeThisAsRaw(desc.set)
+                            })
+                        }
+                        if (typeof desc.get === 'function') {
+                            FReflect.defineProperty(obj, key, {
+                                ...desc,
+                                get: wrapMethodAndInvokeThisAsRaw(desc.get)
+                            })
+                        }
+                    }
+                }
+            }
+        }
+
         dropPrototypeRecursive(metaAttachCallBacks)
         dropPrototypeRecursive(proxyInitCallbacks)
         dropPrototypeRecursive(customTraps)
@@ -669,7 +788,8 @@ export function createScript(obj: any) {
     root: any,
     configureCallback ?: API.ConfigureCallback,
     remoteConfigureCallback ?: API.ConfigureCallback | string,
-    remoteRootExpr = "globalThis"
+    remoteRootExpr = "globalThis",
+    options: { fixInternalSlot: boolean} = { fixInternalSlot: false}
 ) {
     let iframe = document.createElement('iframe')
 
@@ -685,7 +805,7 @@ export function createScript(obj: any) {
     ])
 
     const createRoot = init(configureCallback)
-    const server = createRoot(root)
+    const server = createRoot(root, options)
 
     let realm = (iframe.contentWindow as any).eval(`
         "use strict";
@@ -693,7 +813,7 @@ export function createScript(obj: any) {
         const SES = ${createScript(SES)}
 
         const createRoot = SES.init(${remoteConfigureCallback ? remoteConfigureCallback.toString() : ''})
-        const server = createRoot(${remoteRootExpr})
+        const server = createRoot(${remoteRootExpr}, ${JSON.stringify(options)})
         server
     `)
 
