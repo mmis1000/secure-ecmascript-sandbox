@@ -82,45 +82,6 @@ const getESGlobal = (): KeyValueList => {
     ]
 }
 
-const getAllowPrototypeMethods = (): KeyValueList => {
-    return [
-        'ArrayBuffer',
-        'DataView',
-        'Date', // Unstable
-        'Map',
-
-        ['TypedArray', Reflect.getPrototypeOf(Int8Array)],
-
-        'Int8Array',
-        'Int16Array',
-        'Int32Array',
-
-        'RegExp', // Unstable
-        'Set',
-        'SharedArrayBuffer',
-
-        'Uint8Array',
-        'Uint8ClampedArray',
-        'Uint16Array',
-        'Uint32Array',
-
-        'WeakMap',
-        'WeakSet',
-
-        // from mdn
-        ['Intl.Collator', Intl.Collator],
-        ['Intl.DateTimeFormat', Intl.DateTimeFormat],
-        ['Intl.ListFormat', (Intl as any).ListFormat],
-        ['Intl.Locale', (Intl as any).Locale],
-        ['Intl.NumberFormat', Intl.NumberFormat],
-        ['Intl.PluralRules', Intl.PluralRules],
-        ['Intl.RelativeTimeFormat', (Intl as any).RelativeTimeFormat],
-
-        ['GeneratorFunction', (function * () {}).constructor],
-        ['AsyncFunction', (async function () {}).constructor],
-    ]
-}
-
 const getSharedInit = (
     isShadowTargetContainer: {
         value?: {(v: any): boolean}
@@ -134,7 +95,6 @@ const getSharedInit = (
     },
 
     ESGlobal: KeyValueList,
-    allowPrototypeMethods: KeyValueList,
 
     idToObject: Map<any, any>,
     objectToId: Map<any, any>,
@@ -229,38 +189,6 @@ const getSharedInit = (
                 }
             }
         }
-    
-        // // preserve prototype methods only when required
-        // for (let item of FBArrayToIterator(allowPrototypeMethods)) {
-        //     let key: string
-        //     let value: any
-        //     if (typeof item === 'string') {
-        //         key = item
-        //         value = (globalThis as any)[key]
-        //     } else {
-        //         key = item[0]
-        //         value = item[1]
-        //     }
-    
-        //     if (value != null && (typeof value === 'object' || typeof value === 'function')) {
-        //         if (value.prototype) {
-        //             FBSetAdd(preservedKeys, value.prototype)
-
-        //             const descriptors = FCreateEmpty({})
-    
-        //             for (let propertyKey of FBArrayToIterator((FReflect.ownKeys(value.prototype)))) {
-        //                 const desc = FReflect.getOwnPropertyDescriptor(value.prototype, propertyKey)!
-        //                 descriptors[propertyKey] = desc
-    
-        //                 allowOnlyCallIfFunction(desc.value)
-        //                 allowOnlyCallIfFunction(desc.get)
-        //                 allowOnlyCallIfFunction(desc.set)
-        //             }
-    
-        //             FBWeakMapSet(preservedMeta, value.prototype, getMeta(value.prototype))
-        //         }
-        //     }
-        // }
 
         // specially handle document
         FBMapSet(idToObject, 'document', document)
@@ -358,7 +286,6 @@ const getServerInit = (
 
 
     ESGlobal: KeyValueList,
-    allowPrototypeMethods: KeyValueList,
 
     idToObject: Map<any, any>,
     objectToId: Map<any, any>,
@@ -586,7 +513,6 @@ const getClientInit = (
 
 
     ESGlobal: KeyValueList,
-    allowPrototypeMethods: KeyValueList,
 
     idToObject: Map<any, any>,
     objectToId: Map<any, any>,
@@ -745,7 +671,6 @@ export const createRealm = async () => {
     const sandboxEval = await SES.fastInit(null, 
         (() => {
             ESGlobal = getESGlobal()
-            const allowPrototypeMethods = getAllowPrototypeMethods()
 
             const isShadowTargetContainer: any = {}
             const documentMetaContainer: any = {}
@@ -760,7 +685,6 @@ export const createRealm = async () => {
                 isShadowTargetContainer,
                 documentMetaContainer,
                 ESGlobal,
-                allowPrototypeMethods,
                 idToObject,
                 objectToId,
                 preservedKeys,
@@ -773,7 +697,6 @@ export const createRealm = async () => {
                 isShadowTargetContainer,
                 documentMetaContainer,
                 ESGlobal,
-                allowPrototypeMethods,
                 idToObject,
                 objectToId,
                 preservedKeys,
@@ -792,7 +715,6 @@ export const createRealm = async () => {
         `
         (() => {
             const ESGlobal = (${getESGlobal.toString()})()
-            const allowPrototypeMethods = (${getAllowPrototypeMethods.toString()})()
 
             const isShadowTargetContainer = {}
             const documentMetaContainer = {}
@@ -807,7 +729,6 @@ export const createRealm = async () => {
                 isShadowTargetContainer,
                 documentMetaContainer,
                 ESGlobal,
-                allowPrototypeMethods,
                 idToObject,
                 objectToId,
                 preservedKeys,
@@ -820,7 +741,6 @@ export const createRealm = async () => {
                 isShadowTargetContainer,
                 documentMetaContainer,
                 ESGlobal,
-                allowPrototypeMethods,
                 idToObject,
                 objectToId,
                 preservedKeys,
@@ -840,58 +760,6 @@ export const createRealm = async () => {
         { fixInternalSlot: true }
     )
     const sandbox = sandboxEval('new Proxy(window, {})')
-
-    // const receiver = sandboxEval(`
-    //     'use strict';
-
-    //     const isShadowTarget = window.isShadowTarget;
-    //     delete window.isShadowTarget;
-
-    //     (${((proto: any, descriptors: any) => {
-    //         for (let key of Reflect.ownKeys(descriptors)) {
-    //             const original = Reflect.getOwnPropertyDescriptor(proto, key)!
-
-    //             const shadow = descriptors[key]
-    //             const remap = (fn: any, shadowFn: any) => {
-    //                 if (typeof fn !== 'function') return fn
-
-    //                 const proxy = new Proxy(fn, {
-    //                     apply (target, thisArg, args) {
-    //                         if (isShadowTarget(thisArg)) {
-    //                             return Reflect.apply(shadowFn, thisArg, args)
-    //                         } else {
-    //                             return Reflect.apply(fn, thisArg, args)
-    //                         }
-    //                     }
-    //                 })
-
-    //                 return proxy
-    //             }
-
-    //             let remappedDesc
-
-    //             // debugger
-    //             if ('value' in original) {
-    //                 remappedDesc = {
-    //                     ...original,
-    //                     value: original.value && remap(original.value, shadow.value)
-    //                 }
-    //             } else {
-    //                 remappedDesc = {
-    //                     ...original,
-    //                     get: original.get && remap(original.get, shadow.get),
-    //                     set: original.set && remap(original.set, shadow.set)
-    //                 }
-    //             }
-
-    //             Reflect.defineProperty(proto, key, remappedDesc)
-    //         }
-    //     }).toString()})
-    // `)
-
-    // for (let key of preservedKeys) {
-    //     receiver(key, preservedMeta.get(key)!.descriptors)
-    // }
 
     const documentReceiver = sandboxEval(`
         'use strict';
