@@ -704,6 +704,10 @@ export function init(configureCallback ?: API.ConfigureCallback) {
         if (options.fixInternalSlot) {
             for (let obj of FBArrayToIterator(shared.whitelistedPrototypes)) {
                 for (let key of FBArrayToIterator(FReflect.ownKeys(obj))) {
+                    if (key === 'constructor') {
+                        continue // we should not patch the constructor for obvious reason
+                    }
+
                     const desc = FReflect.getOwnPropertyDescriptor(obj, key)
                     if (!desc) continue
 
