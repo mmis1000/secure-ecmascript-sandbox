@@ -99,8 +99,6 @@ const getSharedInit = (
     idToObject: Map<any, any>,
     objectToId: Map<any, any>,
 
-    preservedKeys: Set<unknown>,
-
     allowOnlyCalled: Set<unknown>,
     banned: Set<unknown>,
 
@@ -289,8 +287,6 @@ const getServerInit = (
 
     idToObject: Map<any, any>,
     objectToId: Map<any, any>,
-
-    preservedKeys: Set<unknown>,
 
     allowOnlyCalled: Set<unknown>,
     banned: Set<unknown>,
@@ -517,8 +513,6 @@ const getClientInit = (
     idToObject: Map<any, any>,
     objectToId: Map<any, any>,
 
-    preservedKeys: Set<unknown>,
-
     allowOnlyCalled: Set<unknown>,
     banned: Set<unknown>,
 
@@ -655,7 +649,6 @@ export const createRealm = async () => {
         isExtensible: boolean
     }
 
-    const preservedKeys = new Set()
     /**
      * original prototype to preserved prototype descriptors
      */
@@ -676,7 +669,6 @@ export const createRealm = async () => {
             const documentMetaContainer: any = {}
             const idToObject = new Map()
             const objectToId = new Map()
-            // const preservedKeys = new Set()
             const allowOnlyCalled = new Set()
             const banned = new Set()
             // const preservedMeta = new WeakMap()
@@ -687,7 +679,6 @@ export const createRealm = async () => {
                 ESGlobal,
                 idToObject,
                 objectToId,
-                preservedKeys,
                 allowOnlyCalled,
                 banned,
                 preservedMeta
@@ -699,7 +690,6 @@ export const createRealm = async () => {
                 ESGlobal,
                 idToObject,
                 objectToId,
-                preservedKeys,
                 allowOnlyCalled,
                 banned,
                 preservedMeta
@@ -720,7 +710,6 @@ export const createRealm = async () => {
             const documentMetaContainer = {}
             const idToObject = new Map()
             const objectToId = new Map()
-            const preservedKeys = new Set()
             const allowOnlyCalled = new Set()
             const banned = new Set()
             const preservedMeta = new WeakMap()
@@ -731,7 +720,6 @@ export const createRealm = async () => {
                 ESGlobal,
                 idToObject,
                 objectToId,
-                preservedKeys,
                 allowOnlyCalled,
                 banned,
                 preservedMeta
@@ -743,7 +731,6 @@ export const createRealm = async () => {
                 ESGlobal,
                 idToObject,
                 objectToId,
-                preservedKeys,
                 allowOnlyCalled,
                 banned,
                 preservedMeta
