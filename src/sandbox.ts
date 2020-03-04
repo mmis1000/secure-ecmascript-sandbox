@@ -622,6 +622,7 @@ export function init(configureCallback ?: API.ConfigureCallback) {
             shared,
             unwrap,
             toWrapper,
+            toRecord,
             currentWorld,
             proxyToToken,
             tokenToProxy,

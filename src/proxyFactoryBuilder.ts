@@ -6,6 +6,7 @@ import {
 import {
     IUnwrap,
     IToWrapper,
+    IToRecord,
     World,
     Token,
     API
@@ -24,6 +25,7 @@ export function createProxyFactory(
     shared: IShared,
     unwrap: IUnwrap,
     toWrapper: IToWrapper,
+    toRecord: IToRecord,
     currentWorld: World,
     proxyToToken: WeakMap<object, Token>,
     tokenToProxy: WeakMap<Token, object>,
@@ -76,12 +78,26 @@ export function createProxyFactory(
         }
 
 
-        function createHandler<T extends keyof World>(key: T) {
+        function createHandler<T extends keyof World>(key: T, mapper: (typeof toWrapper | typeof toRecord)[] | null = null) {
             return function handle(target: any, ...args: any[]) {
                 try {
+                    let argsMapped
+
+                    if (mapper == null) {
+                        argsMapped = FBArrayMap(args, (i: any) => dropPrototypeRecursive(toWrapper(i, currentWorld)))
+                    } else {
+                        argsMapped = []
+
+                        const length = args.length > mapper.length ? mapper.length : args.length
+
+                        for (let i = 0; i < length; i++) {
+                            argsMapped[i] = dropPrototypeRecursive(mapper[i](args[i], currentWorld))
+                        }
+                    }
+
                     var res = (anotherWorld![key] as any)(
                         wrapper,
-                        ...(shared.FBArrayToIterator(FBArrayMap(args, (i: any) => dropPrototypeRecursive(toWrapper(i, currentWorld)))) as any)
+                        ...shared.FBArrayToIterator(argsMapped)
                     )
                 } catch (err) {
                     if (SES.DEV) debugger
@@ -127,15 +143,15 @@ export function createProxyFactory(
             set: createHandler('trap_set'),
             has: createHandler('trap_has'),
             getOwnPropertyDescriptor: createHandler('trap_getOwnPropertyDescriptor'),
-            defineProperty: createHandler('trap_defineProperty'),
+            defineProperty: createHandler('trap_defineProperty', [toWrapper, toRecord]),
             deleteProperty: createHandler('trap_deleteProperty'),
             getPrototypeOf: createHandler('trap_getPrototypeOf'),
             setPrototypeOf: createHandler('trap_setPrototypeOf'),
             isExtensible: createHandler('trap_isExtensible'),
             preventExtensions: createHandler('trap_preventExtensions'),
             ownKeys: createHandler('trap_ownKeys'),
-            apply: createHandler('trap_apply'),
-            construct: createHandler('trap_construct')
+            apply: createHandler('trap_apply', [toWrapper, toRecord]),
+            construct: createHandler('trap_construct', [toRecord, toWrapper])
         }
 
         const preMappedHandlers: Omit<Required<ProxyHandler<any>>, 'enumerate'> = {
