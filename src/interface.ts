@@ -48,6 +48,7 @@ export interface Token {
     owner: World,
     type: 'function' | 'object',
     meta: Record<string, any>,
+    functionHasNoPrototype: boolean,
     /**
      * This method expose `this` to given function due to some methods actually relies on internal slot,
      * So they do not work across realm

@@ -181,8 +181,18 @@ export function init(configureCallback ?: API.ConfigureCallback) {
             // hooks end: attach metadata
 
             token.meta = meta
+            token.functionHasNoPrototype = false
 
-            token.REALLY_DANGEROUS_INVOKE_WITH_RAW_THIS = function (self, ...argsWrapped) {
+            if (type === 'function') {
+                const desc = FReflect.getOwnPropertyDescriptor(obj, 'prototype')
+                if (desc == null) {
+                    token.functionHasNoPrototype = true
+                } else if (desc.configurable) {
+                    token.functionHasNoPrototype = true
+                }
+            }
+
+            token.REALLY_DANGEROUS_INVOKE_WITH_RAW_THIS = (self, ...argsWrapped) => {
                 try {
                     for (let i = 0; i < trapHooks.length; i++) {
                         var hook = trapHooks[i]
@@ -269,12 +279,12 @@ export function init(configureCallback ?: API.ConfigureCallback) {
                 case 'function':
                     return {
                         success: true,
-                        value: createProxy(token, 'function')
+                        value: createProxy(token)
                     }
                 case 'object':
                     return {
                         success: true,
-                        value: createProxy(token, 'object')
+                        value: createProxy(token)
                     }
                 default:
                     return {

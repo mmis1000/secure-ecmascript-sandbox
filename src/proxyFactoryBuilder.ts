@@ -61,8 +61,31 @@ export function createProxyFactory(
     const safeGetProp = shared.safeGetProp
 
 
-    return function createProxy(token: Token, type: 'function' | 'object'): any {
-        const fakeTarget = type === 'object' ? {} : function () { }
+    return function createProxy(token: Token): any {
+        const type = safeGetProp(token, 'type' as 'type')
+
+        if (type !== 'function' && type !== 'object') {
+            throw new FError('bad payload')
+        }
+
+        const isPrototypeLess = safeGetProp(token, 'functionHasNoPrototype' as 'functionHasNoPrototype')
+
+        if (typeof isPrototypeLess !== 'boolean') {
+            throw new FError('bad payload')
+        }
+
+        const anotherWorld = safeGetProp(token, 'owner' as 'owner')
+
+        if (!anotherWorld) {
+            throw new FError('bad payload')
+        }
+
+        const fakeTarget = 
+            type === 'object'
+                ? {} 
+                : isPrototypeLess 
+                    ? () => {} 
+                    : function () {}
 
         const wrapper = {
             type,
@@ -70,12 +93,6 @@ export function createProxyFactory(
         } as const
 
         dropPrototypeRecursive(wrapper)
-
-        const anotherWorld = safeGetProp(token, 'owner' as 'owner')
-
-        if (!anotherWorld) {
-            throw new FError('bad payload')
-        }
 
 
         function createHandler<T extends keyof World>(key: T, mapper: (typeof toWrapper | typeof toRecord)[] | null = null) {
