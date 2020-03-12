@@ -104,6 +104,8 @@ async function main() {
         mainLandDate.__proto__ = null
 
         debugger
+
+        //# sourceURL=sandbox:/test.js
     `)
 
     console.log('prototype still exist', mainLandDate.toISOString())

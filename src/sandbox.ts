@@ -830,6 +830,8 @@ export function createScript(obj: any) {
         const createRoot = SES.init(${remoteConfigureCallback ? remoteConfigureCallback.toString() : ''})
         const server = createRoot(${remoteRootExpr}, ${JSON.stringify(options)})
         server
+
+        //# sourceURL=sandbox-service:/SES.js
     `)
 
     delete (iframe.contentWindow as any).opener

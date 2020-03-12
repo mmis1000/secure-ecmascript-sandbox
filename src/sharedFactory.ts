@@ -266,7 +266,6 @@ export function makeShared() {
         WeakSet.prototype,
 
         ArrayBuffer.prototype,
-        SharedArrayBuffer.prototype,
 
         (Reflect.getPrototypeOf(Int8Array) as any).prototype, // TypedArray
 
@@ -287,6 +286,10 @@ export function makeShared() {
         FReflect.getPrototypeOf(new Map().values()), // map iterator
         FReflect.getPrototypeOf(new Set().values()), // set iterator
     ]
+
+    if (typeof SharedArrayBuffer !== 'undefined') {
+        whitelistedPrototypes[whitelistedPrototypes.length] = SharedArrayBuffer.prototype
+    }
 
     const shared = {
         FProxy,

@@ -84,6 +84,8 @@ async function main() {
         )
 
     debugger
+
+    //# sourceURL=sandbox:/test.js
 `)
 
     console.log(Object.keys(remote))

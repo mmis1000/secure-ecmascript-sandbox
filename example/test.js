@@ -14,7 +14,6 @@ async function main () {
     sandbox.test = test
 
     const app = await sandboxEval(`
-        debugger;
         console.log("hi");
         console.log(test[0]);
         test.__proto__.hello = function () { console.log('first el is ' + this[0]) }
@@ -41,11 +40,28 @@ async function main () {
         }
 
         runVue()
+        
+        //# sourceURL=sandbox:/test.js
     `)
 
     app.list.push({ id: 'outSide', value: 'objectFromOutSide' })
 
     console.log(sandbox.test[0], sandbox.test.hello)
+
+    {
+        var remote = sandboxEval('(function (cb) {return cb()})')
+        var local = function () { return 1}
+        console.profile()
+        console.time()
+        var a = 0
+        for (let i = 0; i < 10000; i++) {
+        a += remote(local)
+        }
+        console.log(a)
+        console.timeEnd()
+        //  workaround firefox bug
+        setTimeout(() => {console.profileEnd()})
+    }
 }
 
 main()

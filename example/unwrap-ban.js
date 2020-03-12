@@ -35,6 +35,8 @@ async function main() {
     } catch (err) {
         console.error('assign it on main window will crash', err)
     }
+
+    //# sourceURL=sandbox:/test.js
 `)
 }
 

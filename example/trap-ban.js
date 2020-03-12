@@ -38,6 +38,8 @@ async function main() {
     } catch (err) {
         console.error('call it will crash', err)
     }
+
+    //# sourceURL=sandbox:/test.js
 `)
 }
 

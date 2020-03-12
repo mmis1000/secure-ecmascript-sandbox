@@ -36,6 +36,8 @@ async function main() {
     console.log('showing distorted prototype: ', main.foo)
 
     debugger
+
+    //# sourceURL=sandbox:/test.js
 `)
     console.log('showing non-distorted prototype: ', /** @type {any} */(window).foo)
 
