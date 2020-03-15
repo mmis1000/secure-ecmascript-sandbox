@@ -316,10 +316,14 @@ export function init(configureCallback ?: API.ConfigureCallback) {
                 case 'number':
                 case 'string':
                 case 'symbol':
-                case 'undefined':
                     return {
                         type: 'primitive',
                         value: obj
+                    }
+                case 'undefined':
+                    return {
+                        type: 'primitive',
+                        value: undefined // thanks to document.all
                     }
                 case 'function':
                     return {
