@@ -16,12 +16,12 @@
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {
-    "@types/jest": "^24.0.24",
-    "@types/node": "^12.12.21",
-    "typescript": "^3.7.4",
+    "@types/jest": "^24.9.1",
+    "@types/node": "^12.12.30",
     "@zoltu/typescript-transformer-append-js-extension": "^1.0.1",
     "jest": "^24.9.0",
-    "ts-jest": "^24.2.0",
-    "ttypescript": "^1.5.8"
+    "ts-jest": "^24.3.0",
+    "ttypescript": "^1.5.10",
+    "typescript": "^3.8.3"
   }
 }
