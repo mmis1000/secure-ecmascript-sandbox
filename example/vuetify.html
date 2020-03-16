@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div id="app">
+        <v-app id="inspire">
+            <v-app-bar app color="indigo" dark>
+                <v-toolbar-title>Application</v-toolbar-title>
+            </v-app-bar>
+
+            <v-content>
+                <v-container fluid>
+                    <v-row>
+                        <v-col cols="6">
+                            <v-subheader>
+                                {{ message }}
+                            </v-subheader>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-text-field label="Hello world" v-model="message"></v-text-field>
+                        </v-col>
+                    </v-row>
+                    <v-row>
+                        <v-col cols="6">
+                            <v-btn block v-on:click="add">Add</v-btn>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-btn block v-on:click="remove">remove</v-btn>
+                        </v-col>
+                    </v-row>
+                    <v-row v-for="item in list" v-bind:key="item.id">
+                        <v-col cols="6">
+                            <v-text-field label="value" v-model="item.value"></v-text-field>
+                        </v-col>
+                        <v-col cols="6">
+                            <v-subheader>
+                                {{ item.value }}
+                            </v-subheader>
+                        </v-col>
+                    </v-row>
+                </v-container>
+            </v-content>
+            <v-footer color="indigo" app>
+                <span class="white--text">&copy; 2019</span>
+            </v-footer>
+        </v-app>
+    </div>
+    <script type="module" src="./vuetify.js"></script>
+</body>
+
+</html>
