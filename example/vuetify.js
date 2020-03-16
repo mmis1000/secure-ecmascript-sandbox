@@ -14,12 +14,6 @@ async function main () {
     sandbox.test = test
 
     const app = await sandboxEval(`
-        console.log("hi");
-        console.log(test[0]);
-        test.__proto__.hello = function () { console.log('first el is ' + this[0]) }
-        test[0] = 6
-        test.hello()
-
         async function runVue () {
             const { default: Vue } = await import('${location.protocol}//${location.host}/${location.pathname.replace(/\/[^\/]+$/, '/')}/assets/vue.js')
             const { default: Vuetify } = await import('${location.protocol}//${location.host}/${location.pathname.replace(/\/[^\/]+$/, '/')}/assets/vuetify.js')
