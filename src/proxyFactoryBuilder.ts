@@ -250,7 +250,7 @@ export function createProxyFactory(
             },
             has(target, key) {
                 const desc = FResolveDesc(proxy, key)
-                return desc === undefined
+                return desc !== undefined
             }
         }
 
