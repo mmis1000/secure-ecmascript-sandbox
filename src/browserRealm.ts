@@ -248,7 +248,7 @@ const getSharedInit = (
     
         ctx.registerTrapHooks({
             apply: failIfBanned,
-            construct: failIfBannedOrCallOnly,
+            construct: failIfBanned,
     
             set: failIfBannedOrCallOnly,
             get: failIfBannedOrCallOnly,
