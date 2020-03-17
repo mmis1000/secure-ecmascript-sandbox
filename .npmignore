@@ -3,3 +3,4 @@ coverage
 *.png
 *.log
 node_modules
+__test__/*.js
