@@ -1,6 +1,8 @@
 coverage
+example
 .vscode
 *.png
 *.log
 node_modules
-__test__/*.js
+*/__tests__/*.js
+*/__tests__/*.ts
