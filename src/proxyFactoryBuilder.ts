@@ -251,6 +251,16 @@ export function createProxyFactory(
             has(target, key) {
                 const desc = FResolveDesc(proxy, key)
                 return desc !== undefined
+            },
+            // this will crash if not handled correctly, so it also need to be specially handled
+            preventExtensions(target) {
+                const success = defaultHandlers.preventExtensions(target)
+                
+                if (success) {
+                    freezeFakeIfNecessary()
+                }
+
+                return success
             }
         }
 
