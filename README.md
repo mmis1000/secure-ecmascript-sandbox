@@ -1,4 +1,4 @@
-# Secure ECMAScript Sandbox experiment (not done yet)
+# Secure ECMAScript Sandbox experiment
 
 ## Goal
 
@@ -12,12 +12,14 @@ This library
   - Object was forced to wrap/unwrap into correct state when go though membrane
 - Allow dev to remap identity between different context easily
   - see `example/remap.html`
-- Allow dev to fake result of whatever proxy trap you want to another context easily
+- Allow dev to takeover proxy traps completely if they want
   - see `example/trap-ban.html`, `example/element-setter-override.html`
 - Allow dev to stop another context from using given object that you don't like them to touch
   - see `example/unwrap-ban.html`
 - Mixed example, Allow you to fake literally everything against some object
-  - see `full-remap-date-prototype`
+  - see `example/full-remap-date-prototype`
+- Mixed example, Allow you to run a full ui library unmodified in sandbox without tainting the html element itself at all
+  - see `example/vuetify`
 
 ### DOES NOT
 
