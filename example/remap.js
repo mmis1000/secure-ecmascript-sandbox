@@ -4,27 +4,11 @@ import SES from '../lib/sandbox.js'
 
 async function main() {
     const remote = /** @type {any} */(window).remote = await SES.fastInit(window, (ctx) => {
-        ctx.registerMetaCallback(obj => {
-            if (obj === Array) {
-                return {
-                    isArray: true
-                }
-            } if (obj === Object.prototype) {
-                return {
-                    isRoot: true
-                }
-            } else {
-                return {}
-            }
-        })
+        ctx.registerWellKnownValue('Array', Array)
+        ctx.registerWellKnownValue('Object.prototype', Object.prototype)
     }, (ctx) => {
-        ctx.registerCustomProxyInit(token => {
-            if (token.meta.isArray) {
-                return Array
-            } else if (token.meta.isRoot) {
-                return Object.prototype
-            }
-        })
+        ctx.registerWellKnownValue('Array', Array)
+        ctx.registerWellKnownValue('Object.prototype', Object.prototype)
     })
 
     remote.console = console
