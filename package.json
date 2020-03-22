@@ -1,6 +1,6 @@
 {
   "name": "@mmis1000/secure-es-wrapper",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "",
   "main": "lib-cjs/sandbox.js",
   "module": "lib/sandbox.js",
@@ -25,7 +25,7 @@
     "typescript": "^3.8.3"
   },
   "repository": {
-    "type" : "git",
-    "url" : "https://github.com/mmis1000/secure-ecmascript-sandbox.git"
+    "type": "git",
+    "url": "https://github.com/mmis1000/secure-ecmascript-sandbox.git"
   }
 }

@@ -1,19 +1,3 @@
-export let DEV = false
-
-export const flags = {
-    DEV: false
-}
-
-const SES = {
-    get DEV () {
-        return flags.DEV
-    },
-
-    set DEV (value) {
-        flags.DEV = value
-    }
-}
-
 export function makeShared() {
     'use strict';
 

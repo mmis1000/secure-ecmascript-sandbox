@@ -1,6 +1,5 @@
 import {
-    makeShared,
-    flags
+    makeShared
 } from './sharedFactory'
 
 import {
@@ -15,34 +14,30 @@ import {
 } from './interface.js'
 
 import {
-    createProxyFactory
+    createProxyFactoryFactory
 } from './proxyFactoryBuilder'
 
 const SES = {
     makeShared,
-    createProxyFactory,
+    createProxyFactoryFactory,
     init,
     createScript,
     fastInit,
     fastInitNode,
-    get DEV () {
-        return flags.DEV
-    },
-
-    set DEV (value) {
-        flags.DEV = value
-    }
+    DEV: false
 }
 
 // this need to be run before any other script to get properly untainted global
 export function init(configureCallback ?: API.ConfigureCallback) {
     'use strict';
-    // disable caller attack on the stack
+
+    const createProxyFactory = SES.createProxyFactoryFactory(SES)
 
     // Must not use any global object
     // And using only the frozen object returns from makeShared
     const shared = SES.makeShared()
 
+    // lock down options after this point
     shared.dropPrototypeRecursive(SES as any)
 
     const FError = shared.FError
@@ -632,7 +627,7 @@ export function init(configureCallback ?: API.ConfigureCallback) {
 
         dropPrototypeRecursive(currentWorld)
 
-        const createProxy = SES.createProxyFactory(
+        const createProxy = createProxyFactory(
             shared,
             unwrap,
             toWrapper,
