@@ -81,6 +81,8 @@ async function main() {
         console.log(typeof div.openOrClosedShadowRoot, div.openOrClosedShadowRoot)
         //# sourceURL=sandbox:/test.js
     `)
+
+    console.log('the identities still match', div === remote.div)
 }
 
 main()

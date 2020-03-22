@@ -14,12 +14,15 @@ This library
   - see `example/remap.html`
 - Allow dev to takeover proxy traps completely if they want
   - see `example/trap-ban.html`, `example/element-setter-override.html`
+- Allow dev to divert properties without cause the identity to be discontinued.
+  - like what firefox's XRayWrapper did
+  - see `example/open-or-closed-shadow-root` for a extra property that only exists in sandbox.
 - Allow dev to stop another context from using given object that you don't like them to touch
   - see `example/unwrap-ban.html`
 - Mixed example, Allow you to fake literally everything against some object
-  - see `example/full-remap-date-prototype`
+  - see `example/full-remap-date-prototype.html`
 - Mixed example, Allow you to run a full ui library unmodified in sandbox without tainting the html element itself at all
-  - see `example/vuetify`
+  - see `example/vuetify.html`
 
 ### DOES NOT
 
