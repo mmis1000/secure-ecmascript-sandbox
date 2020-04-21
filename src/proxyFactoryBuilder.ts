@@ -65,6 +65,18 @@ export function createProxyFactoryFactory (SES: { DEV: boolean }) {
                 throw new FError('bad payload')
             }
     
+            const isRevoked = safeGetProp(token, 'isRevoked' as 'isRevoked')
+    
+            if (typeof isRevoked !== 'boolean') {
+                throw new FError('bad payload')
+            }
+    
+            const isArray = safeGetProp(token, 'isArray' as 'isArray')
+    
+            if (typeof isArray !== 'boolean') {
+                throw new FError('bad payload')
+            }
+    
             const anotherWorld = safeGetProp(token, 'owner' as 'owner')
     
             if (!anotherWorld) {
@@ -73,7 +85,9 @@ export function createProxyFactoryFactory (SES: { DEV: boolean }) {
     
             const fakeTarget = 
                 type === 'object'
-                    ? {} 
+                    ? isArray
+                        ? []
+                        : {}
                     : isPrototypeLess 
                         ? () => {} 
                         : function () {}
@@ -255,9 +269,15 @@ export function createProxyFactoryFactory (SES: { DEV: boolean }) {
                 }
             }
     
-            // @ts-ignore
-            const proxy = new FProxy(fakeTarget, preMappedHandlers)
-    
+            let proxy = new FProxy(fakeTarget, preMappedHandlers)
+
+            // replace it with revoked version if it is revoked
+            if (isRevoked) {
+                const { proxy: badProxy , revoke } = shared.FProxyRevocable(fakeTarget, preMappedHandlers)
+                revoke()
+                proxy = badProxy
+            }
+
             let res
     
             for (let i = 0; i < proxyInitCallbacks.length; i++) {

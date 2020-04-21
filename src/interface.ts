@@ -47,6 +47,8 @@ export type Response<T, U> = ResponseSuccess<T> | ResponseFailed<U>
 export interface Token {
     owner: World,
     type: 'function' | 'object',
+    isRevoked: boolean,
+    isArray: boolean,
     meta: Record<string, any>,
     functionHasNoPrototype: boolean,
     /**

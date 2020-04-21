@@ -40,6 +40,7 @@ export function init(configureCallback ?: API.ConfigureCallback) {
     // lock down options after this point
     shared.dropPrototypeRecursive(SES as any)
 
+    const FArrayIsArray = shared.FArrayIsArray
     const FError = shared.FError
 
     const FMap = shared.FMap
@@ -157,6 +158,19 @@ export function init(configureCallback ?: API.ConfigureCallback) {
 
             token.owner = world
             token.type = type
+
+            // wtf?
+            // https://tc39.es/ecma262/#sec-isarray
+            // https://tc39.es/ecma262/#sec-proxy-revocation-functions
+
+            try {
+                token.isArray = FArrayIsArray(obj)
+                token.isRevoked = false
+            } catch (err) {
+                token.isArray = false
+                token.isRevoked = true
+            }
+
             let meta = {}
 
             // hooks: attach metadata

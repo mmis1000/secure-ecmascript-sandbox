@@ -2,7 +2,12 @@ export function makeShared() {
     'use strict';
 
     // function/object that prefixed with F (which means the binding is frozen after the return)
+    const FArray = Array
+    const FArrayIsArray = Array.isArray
+
     const FProxy = Proxy
+    const FProxyRevocable = Proxy.revocable
+
     const FError = Error
 
     const FCall = Function.prototype.call
@@ -277,7 +282,11 @@ export function makeShared() {
 
     const shared = {
         FProxy,
+        FProxyRevocable,
         FError,
+
+        FArray,
+        FArrayIsArray,
 
         FMap,
         FBMapHas,

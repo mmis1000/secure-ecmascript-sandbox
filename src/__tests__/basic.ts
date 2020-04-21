@@ -103,4 +103,25 @@ describe('basic', () => {
         `)
         expect(Object.isFrozen(remote.obj3)).toBe(true)
     })
+
+    test('proxied array is array', () => {
+        remote.eval(`
+            global.obj4 = []
+        `)
+
+        expect(Array.isArray(remote.obj4)).toBe(true)
+    })
+
+    test('revoked proxy is revoked', () => {
+        remote.eval(`
+            const { proxy, revoke } = Proxy.revocable({}, {})
+            revoke()
+
+            global.obj5 = proxy
+        `)
+
+        expect(() => {
+            Array.isArray(remote.obj5)
+        }).toThrow()
+    })
 });
