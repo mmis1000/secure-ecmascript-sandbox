@@ -867,10 +867,12 @@ export function fastInitNode(root: any, configureCallback ?: API.ConfigureCallba
 
     const rawRealGlobalExpr = `(0, eval)("'use strict'; this")`
 
+    let script = createScript(SES)
+
     let fullScript = `
         "use strict";
 
-        const SES = ${createScript(SES)}
+        const SES = ${script}
 
         const createRoot = SES.init(${remoteConfigureCallback ? remoteConfigureCallback.toString() : ''})
         const server = createRoot(${rawRealGlobalExpr})
@@ -878,15 +880,24 @@ export function fastInitNode(root: any, configureCallback ?: API.ConfigureCallba
     `
 
     /* istanbul ignore next */ if (process.env.NODE_ENV === 'test' && /cov_[a-zA-Z0-9]+/.test(fullScript)) {
-        const ids = new Set(fullScript.match(/cov_[a-zA-Z0-9]+/g))
+        // use prebuilds
+        /* istanbul ignore next */
+        const preBuild = eval(`
+            "use strict";
+            const path = require('path')
+            const file = require('fs').readFileSync(path.resolve(__dirname, './__test_only__/dist.js'), { encoding: 'utf8' })
+            file
+        `)
 
-        let prepend = `"use strict";\n`
+        fullScript = `
+            "use strict";
 
-        for (let id of ids) {
-            prepend += `const ${id} = (0, eval)("'use strict'; this").${id}  = { a: [], b: new Proxy([], { get: () => [] }), f: [], s: [] };\n`
-        }
+            const SES = ${preBuild}
 
-        fullScript = prepend + fullScript
+            const createRoot = SES.init(${remoteConfigureCallback ? remoteConfigureCallback.toString() : ''})
+            const server = createRoot(${rawRealGlobalExpr})
+            server
+        `
     }
 
     const { runInNewContext } = require('vm')

@@ -106,3 +106,5 @@ dist
 # exlcude the dist
 lib/
 lib-cjs/
+
+src/__test_only__/dist.js

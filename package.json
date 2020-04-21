@@ -6,6 +6,7 @@
   "module": "lib/sandbox.js",
   "scripts": {
     "test": "jest",
+    "coverage": "ts-node --project ./tsconfig-cjs.json ./src/__test_only__/prebuild.ts && jest",
     "build": "npx ttsc --build tsconfig.json --clean && npx ttsc --build tsconfig-cjs.json --clean && npx ttsc --build --verbose && npx ttsc --build --verbose ./tsconfig-cjs.json",
     "dev": "npx ttsc -w",
     "dev-cjs": "npx ttsc -w -p tsconfig-cjs.json",
@@ -21,6 +22,7 @@
     "@zoltu/typescript-transformer-append-js-extension": "^1.0.1",
     "jest": "^25.1.0",
     "ts-jest": "^25.2.1",
+    "ts-node": "^8.9.0",
     "ttypescript": "^1.5.10",
     "typescript": "^3.8.3"
   },

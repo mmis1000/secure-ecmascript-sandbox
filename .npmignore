@@ -6,3 +6,4 @@ example
 node_modules
 */__tests__/*.js
 */__tests__/*.ts
+*/__test_only__/*.ts
